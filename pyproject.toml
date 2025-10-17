@@ -1,0 +1,30 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [ "hatchling" ]
+
+[project]
+name = "sphinx-holoviews"
+version = "0.1.0"
+license = "MPL-2.0"
+authors = [ { name = "Philipp A.", email = "flying-sheep@web.de" } ]
+requires-python = ">=3.12"
+classifiers = [
+  "Framework :: Sphinx :: Extension",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = [ "holoviews", "myst-nb", "nbformat", "sphinx", "sphinx-design" ]
+
+[tool.hatch.envs.default]
+installer = "uv"
+dependencies = [ "furo", "matplotlib", "plotly" ]
+scripts.docs-build = "sphinx-build -M html docs docs/_build {args}"
+scripts.docs-clean = "rm -rf docs/_build {args}"
+scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
+
+[tool.ruff]
+lint.extend-select = [ "CPY", "I", "TC", "UP" ]
+lint.flake8-type-checking.exempt-modules = [  ]
+lint.flake8-type-checking.strict = true

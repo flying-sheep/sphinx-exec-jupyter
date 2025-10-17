@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+/build/
+/dist/
+/.python-version
+
+# Testing
+/test-data/
+/.*cache/
+
+# Docs
+/docs/_build/
+
+# IDEs
+/.idea/
