@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import json
 from importlib.metadata import version
+from itertools import batched
 from typing import TYPE_CHECKING, TypedDict
 
-import docutils.utils
 import holoviews as hv
 import myst_nb.docutils_
 import myst_nb.sphinx_ext
@@ -24,18 +24,12 @@ if TYPE_CHECKING:
 __all__ = ["setup", "HoloviewsDirective"]
 
 
-def execute_cells(
-    cells: list[str], document: nodes.document | None = None
-) -> list[nodes.Node]:
+def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = json.dumps(
         v4.new_notebook(cells=[v4.new_code_cell(cell) for cell in cells])
     )
-    if document is None:
-        document = docutils.utils.new_document("")
-    document["source"] = notebook_json
     document.settings.nb_execution_mode = "force"
-    document.settings.nb_execution_in_temp = True
 
     parser = myst_nb.docutils_.Parser()
     after_last_child = len(document.children)
@@ -67,23 +61,32 @@ class HoloviewsDirective(SphinxDirective):
         backends = self.options.get("backends", ["bokeh"])
 
         code = "\n".join(self.content)
-        results = execute_cells(
+        results_raw = execute_cells(
             [
-                f"import holoviews as hv\nhv.extension({backend!r})\n{code}"
+                block
                 for backend in backends
+                for block in [
+                    f"import holoviews as hv\nhv.extension({backend!r})",
+                    code,
+                ]
             ],
             self.state.document,
         )
 
+        results: list[tuple[nodes.Node, nodes.Node]] = []
+        for header, plot in batched(results_raw, 2, strict=True):
+            _code, header = header.children  # discard header code
+            results.append((header, plot))
+
         if len(results) == 1:
-            return results
+            return list(results[0])
 
         tab_set = create_component("tab-set", classes=["sd-tab-set"])
-        for i, (tab_name, tab_nodes) in enumerate(zip(backends, results)):
+        for i, (tab_name, (header, plot)) in enumerate(zip(backends, results)):
             textnodes, _ = self.state.inline_text(tab_name, self.lineno)
             tab_label = nodes.rubric(tab_name, "", *textnodes, classes=["sd-tab-label"])
             tab_content = create_component(
-                "tab-content", classes=["sd-tab-content"], children=[tab_nodes]
+                "tab-content", classes=["sd-tab-content"], children=[header, plot]
             )
             tab_item = create_component(
                 "tab-item",
