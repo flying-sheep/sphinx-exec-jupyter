@@ -1,5 +1,5 @@
-sphinx-holoviews
-================
+sphinx-exec-jupyter
+===================
 
 This extension adds one directive:
 

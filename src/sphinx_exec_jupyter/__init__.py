@@ -106,7 +106,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.connect("html-page-context", myst_nb.sphinx_ext.add_per_page_html_resources)
 
     return ExtensionMetadata(
-        version=version("sphinx_holoviews"),
+        version=version("sphinx-exec-jupyter"),
         parallel_read_safe=True,
         parallel_write_safe=True,
     )
