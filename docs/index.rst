@@ -34,7 +34,7 @@ results in:
 
     hv.Curve([1, 2, 3, 2, 1])
 
-With multiple backends specified:
+With multiple backends specified (needs the `sphinx_design` extension to be loaded):
 
 .. code-block:: rst
 
