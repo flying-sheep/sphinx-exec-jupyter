@@ -31,16 +31,12 @@ FILES = files(__name__)
 COLLECT_URLS = (FILES / "collect-urls.py").read_text()
 
 # from https://github.com/holoviz-dev/nbsite/blob/e75708a28d9a4ab805753c0520b8eb8779c79d82/nbsite/pyodide/__init__.py#L82
-JS_URLS = {
-    "bokeh": [
-        f"https://cdn.bokeh.org/bokeh/release/bokeh-{BOKEH_VERSION}.min.js",
-        f"https://cdn.bokeh.org/bokeh/release/bokeh-widgets-{BOKEH_VERSION}.min.js",
-        f"https://cdn.bokeh.org/bokeh/release/bokeh-tables-{BOKEH_VERSION}.min.js",
-        f"{CDN_DIST}panel.min.js",
-    ],
-    "plotly": [],
-    "matplotlib": [],
-}
+JS_URLS = [
+    f"https://cdn.bokeh.org/bokeh/release/bokeh-{BOKEH_VERSION}.min.js",
+    f"https://cdn.bokeh.org/bokeh/release/bokeh-widgets-{BOKEH_VERSION}.min.js",
+    f"https://cdn.bokeh.org/bokeh/release/bokeh-tables-{BOKEH_VERSION}.min.js",
+    f"{CDN_DIST}panel.min.js",
+]
 
 
 def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node]:
@@ -93,7 +89,7 @@ class HoloviewsDirective(SphinxDirective):
             self.state.document,
         )
 
-        urls = {"js": [url for b in backends for url in JS_URLS[b]], "css": []}
+        urls = {"js": JS_URLS, "css": []}
         results: list[nodes.Node] = []
         for _header, plot, urls_cell in batched(results_raw, 3, strict=True):
             # container → output (second child) → literal (first child) → text
