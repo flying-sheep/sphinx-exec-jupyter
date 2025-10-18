@@ -89,6 +89,9 @@ class HoloviewsDirective(SphinxDirective):
         if len(results) == 1:
             return list(results[0])
 
+        if "sphinx_design" not in self.env.app.extensions:
+            self.error("`sphinx_design` extension is required for multiple backends")
+
         tab_set = create_component("tab-set", classes=["sd-tab-set"])
         for i, (tab_name, plot) in enumerate(zip(backends, results)):
             textnodes, _ = self.state.inline_text(tab_name, self.lineno)
