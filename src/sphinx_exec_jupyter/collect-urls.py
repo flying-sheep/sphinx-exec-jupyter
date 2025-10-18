@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 import json
 
 from bokeh.model import Model
