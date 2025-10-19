@@ -57,7 +57,7 @@ class HoloviewsDirective(SphinxDirective):
     options: HoloviewsOptions  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def run(self) -> list[nodes.Node]:
-        backends = self.options.get("backends", ["bokeh"])
+        backends = self.options.get("backends", self.env.config.holoviews_backends)
 
         code = "\n".join(self.content)
         results_raw = execute_cells(
@@ -111,6 +111,7 @@ class HoloviewsDirective(SphinxDirective):
 
 def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_directive("holoviews", HoloviewsDirective)
+    app.add_config_value("holoviews_backends", ["bokeh"], "env", {list})
 
     return ExtensionMetadata(
         version=version("sphinx-exec-jupyter"),
