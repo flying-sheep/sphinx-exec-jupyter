@@ -28,7 +28,7 @@ Examples
 results in:
 
 ..  exec-jupyter::
-    
+
     import pandas as pd
 
     pd.DataFrame(dict(
