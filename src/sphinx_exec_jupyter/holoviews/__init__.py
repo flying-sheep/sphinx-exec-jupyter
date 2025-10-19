@@ -75,7 +75,7 @@ class HoloviewsDirective(SphinxDirective):
 
         urls = {"js": JS_URLS, "css": []}
         results: list[nodes.Node] = []
-        for _header, plot, urls_cell in batched(results_raw, 3, strict=True):
+        for _header, plot, urls_cell in batched(results_raw, 3):
             # container → output (second child) → literal (first child) → text
             new_urls = json.loads(urls_cell.children[1].children[0].astext())
             urls["js"] += new_urls["js"]

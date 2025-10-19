@@ -24,4 +24,9 @@ def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node
     parser.parse(notebook_json, document)
     nodes = document.children[after_last_child:]
     del document.children[after_last_child:]
+
+    for key in ["words", "minutes"]:
+        document.substitution_names.pop(f"wordcount-{key}", None)
+        document.substitution_defs.pop(f"wordcount-{key}", None)
+
     return nodes

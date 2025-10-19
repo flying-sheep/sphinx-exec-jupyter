@@ -1,7 +1,49 @@
-sphinx-exec-jupyter
-===================
+``sphinx_exec_jupyter``
+=======================
 
-This extension adds one directive:
+The ``sphinx-exec-jupyter`` Sphinx extension allows you to execute code
+in a Jupyter kernel and embed the output directly into your Sphinx documentation.
+
+This extension adds at least one directive (see `sphinx_exec_jupyter.holoviews`_ for more):
+
+..  rst:directive:: exec-jupyter
+
+    Execute a Jupyter notebook cell and embed the output into the documentation.
+    The Python expression on the last line of the directive body is displayed.
+
+Examples
+--------
+
+.. code-block:: rst
+
+    ..  exec-jupyter::
+
+        import pandas as pd
+
+        pd.DataFrame(dict(
+            A=[1, 2, 3],
+            B=[4, 5, 6],
+        ))
+
+results in:
+
+..  exec-jupyter::
+    
+    import pandas as pd
+
+    pd.DataFrame(dict(
+        A=[1, 2, 3],
+        B=[4, 5, 6],
+    ))
+
+``sphinx_exec_jupyter.holoviews``
+---------------------------------
+
+If you installed ``sphinx-exec-jupyter`` with the ``holoviews`` extra
+(e.g. ``pip install sphinx-exec-jupyter[holoviews]``),
+the ``sphinx_exec_jupyter.holoviews`` sub-extension is loaded automatically.
+
+This extension adds one more directive:
 
 ..  rst:directive:: holoviews
 
@@ -16,6 +58,8 @@ This extension adds one directive:
 ..
     See here for syntax:
     https://www.sphinx-doc.org/en/master/usage/domains/restructuredtext.html#directive-rst-directive
+
+.. _holoviews-examples:
 
 Examples
 --------

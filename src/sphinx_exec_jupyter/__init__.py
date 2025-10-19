@@ -8,21 +8,27 @@ import myst_nb.sphinx_ext
 from sphinx.errors import ExtensionError
 from sphinx.util.typing import ExtensionMetadata
 
+from ._directive import ExecJupyterDirective
+
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-__all__ = ["setup"]
+__all__ = ["setup", "ExecJupyterDirective"]
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
+    app.add_directive("exec-jupyter", ExecJupyterDirective)
+
     try:
         app.setup_extension("sphinx_exec_jupyter.holoviews")
     except ExtensionError:
         pass
 
-    app.connect("config-inited", myst_nb.sphinx_ext.add_exclude_patterns)
-    app.connect("build-finished", myst_nb.sphinx_ext.add_global_html_resources)
-    app.connect("html-page-context", myst_nb.sphinx_ext.add_per_page_html_resources)
+    if "myst_nb" not in app.extensions:
+        myst_nb.sphinx_ext.add_css(app)
+        app.connect("config-inited", myst_nb.sphinx_ext.add_exclude_patterns)
+        app.connect("build-finished", myst_nb.sphinx_ext.add_global_html_resources)
+        app.connect("html-page-context", myst_nb.sphinx_ext.add_per_page_html_resources)
 
     return ExtensionMetadata(
         version=version("sphinx-exec-jupyter"),
