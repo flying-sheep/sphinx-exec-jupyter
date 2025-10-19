@@ -27,7 +27,7 @@ optional-dependencies.holoviews = [ "holoviews", "sphinx-design" ]
 installer = "uv"
 features = [ "holoviews" ]
 dependencies = [ "furo", "matplotlib", "plotly" ]
-scripts.docs-build = "sphinx-build -M html docs docs/_build {args}"
+scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
 scripts.docs-clean = "rm -rf docs/_build {args}"
 scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
 
