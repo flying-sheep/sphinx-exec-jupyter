@@ -43,7 +43,13 @@ If you installed ``sphinx-exec-jupyter`` with the ``holoviews`` extra
 (e.g. ``pip install sphinx-exec-jupyter[holoviews]``),
 the ``sphinx_exec_jupyter.holoviews`` sub-extension is loaded automatically.
 
-This extension adds one more directive:
+This extension adds a setting and one more directive:
+
+..  confval:: autoclass_content
+    :type: ``list[str]``
+    :default: ``['bokeh']``
+
+    A list of backends to use for rendering HoloViews plots.
 
 ..  rst:directive:: holoviews
 
@@ -53,7 +59,7 @@ This extension adds one more directive:
     ..  rst:directive:option:: backends: backend1,backend2,...
         :type: comma separated list of backends
 
-        The list of backends to use for rendering the plot. Defaults to ``bokeh``.
+        The list of backends to use for rendering the plot. Defaults to :confval:`autoclass_content`.
 
 ..
     See here for syntax:
@@ -78,7 +84,7 @@ results in:
 
     hv.Curve([1, 2, 3, 2, 1])
 
-With multiple backends specified (needs the `sphinx_design` extension to be loaded):
+With multiple backends specified (needs the ``sphinx_design`` extension to be loaded):
 
 .. code-block:: rst
 
