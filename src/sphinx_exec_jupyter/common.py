@@ -49,17 +49,19 @@ _unset = object()
 
 
 @contextmanager
-def temp_setting(env: object, key: str, value: object) -> Generator[None, None, None]:
+def temp_setting(
+    container: object, key: str, value: object
+) -> Generator[None, None, None]:
     """Context manager to temporarily set a document setting."""
-    old_value = getattr(env, key, _unset)
-    setattr(env, key, value)
+    old_value = getattr(container, key, _unset)
+    setattr(container, key, value)
     try:
         yield
     finally:
         if old_value is _unset:
-            delattr(env, key)
+            delattr(container, key)
         else:
-            setattr(env, key, old_value)
+            setattr(container, key, old_value)
 
 
 @contextmanager

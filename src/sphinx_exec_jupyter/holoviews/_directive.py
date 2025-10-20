@@ -43,7 +43,7 @@ def choice_list(argument: str, choices: Iterable[str]) -> list[str]:
     ]
 
 
-class HoloViewsOptions(TypedDict, total=False):
+class HoloViewsDirectiveOptions(TypedDict, total=False):
     backends: list[str]
 
 
@@ -53,26 +53,29 @@ class HoloViewsDirective(SphinxDirective):
     )
     has_content = True
 
-    options: HoloViewsOptions  # pyright: ignore[reportIncompatibleVariableOverride]
+    options: HoloViewsDirectiveOptions  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def run(self) -> list[nodes.Node]:
         backends = self.options.get("backends", self.env.config.holoviews_backends)
 
         code = "\n".join(self.content)
+        cells = [
+            block
+            for backend in backends
+            for block in [
+                f"import holoviews as hv\nhv.extension({backend!r})",
+                code,
+                COLLECT_URLS,
+            ]
+        ]
+        n_blocks_per_backend = 3
+        assert len(cells) == n_blocks_per_backend * len(backends)
         results_raw = execute_cells(
-            [
-                block
-                for backend in backends
-                for block in [
-                    f"import holoviews as hv\nhv.extension({backend!r})",
-                    code,
-                    COLLECT_URLS,
-                ]
-            ],
+            cells,
             self.state.document,
             env=cast("SphinxEnvType", self.env),
         )
-        if (len(results_raw) % 3) != 0:
+        if (len(results_raw) % n_blocks_per_backend) != 0:
             raise self.error(
                 "Unexpected number of outputs from HoloViews execution:\n"
                 f"{'\n\n'.join(n.pformat() for n in results_raw)}"
@@ -80,7 +83,7 @@ class HoloViewsDirective(SphinxDirective):
 
         urls = {"js": JS_URLS, "css": []}
         results: list[nodes.Node] = []
-        for _header, plot, urls_cell in batched(results_raw, 3):
+        for _header, plot, urls_cell in batched(results_raw, n_blocks_per_backend):
             try:
                 # container → output (second child) → literal (first child) → text
                 new_urls = json.loads(urls_cell.children[1].children[0].astext())
@@ -103,7 +106,9 @@ class HoloViewsDirective(SphinxDirective):
             return list(results)
 
         if "sphinx_design" not in self.env.app.extensions:
-            self.error("`sphinx_design` extension is required for multiple backends")
+            raise self.error(
+                "`sphinx_design` extension is required for multiple backends"
+            )
 
         tab_set = create_component("tab-set", classes=["sd-tab-set"])
         for i, (tab_name, plot) in enumerate(zip(backends, results)):

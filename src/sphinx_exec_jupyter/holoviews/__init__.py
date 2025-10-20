@@ -6,13 +6,18 @@ from typing import TYPE_CHECKING
 
 from sphinx.util.typing import ExtensionMetadata
 
-from ._directive import HoloViewsDirective, HoloViewsOptions
+from ._directive import HoloViewsDirective, HoloViewsDirectiveOptions
 from ._mime_render import HoloViewsMimeRenderer
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-__all__ = ["setup", "HoloViewsDirective", "HoloViewsOptions", "HoloViewsMimeRenderer"]
+__all__ = [
+    "setup",
+    "HoloViewsDirective",
+    "HoloViewsDirectiveOptions",
+    "HoloViewsMimeRenderer",
+]
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
