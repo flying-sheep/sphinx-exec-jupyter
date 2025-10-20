@@ -45,7 +45,7 @@ the ``sphinx_exec_jupyter.holoviews`` sub-extension is loaded automatically.
 
 This extension adds a setting and one more directive:
 
-..  confval:: autoclass_content
+..  confval:: holoviews_backends
     :type: ``list[str]``
     :default: ``['bokeh']``
 
@@ -59,7 +59,7 @@ This extension adds a setting and one more directive:
     ..  rst:directive:option:: backends: backend1,backend2,...
         :type: comma separated list of backends
 
-        The list of backends to use for rendering the plot. Defaults to :confval:`autoclass_content`.
+        The list of backends to use for rendering the plot. Defaults to :confval:`holoviews_backends`.
 
 ..
     See here for syntax:
