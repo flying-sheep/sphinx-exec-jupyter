@@ -22,9 +22,7 @@ dependencies = [
   "sphinx",
 ]
 optional-dependencies.holoviews = [ "holoviews", "sphinx-design" ]
-
-[project.entry-points."myst_nb.mime_renderers"]
-holoviews = "sphinx_exec_jupyter.holoviews:HoloViewsMimeRenderer"
+entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.holoviews:HoloViewsMimeRenderer"
 
 [tool.hatch.envs.default]
 installer = "uv"
