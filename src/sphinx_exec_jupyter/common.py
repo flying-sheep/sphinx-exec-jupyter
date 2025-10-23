@@ -22,10 +22,7 @@ class ExtData(TypedDict, total=False):
 
 
 def execute_cells(
-    cells: list[str],
-    document: nodes.document,
-    *,
-    env: SphinxEnvType,
+    cells: list[str], document: nodes.document, *, env: SphinxEnvType
 ) -> list[nodes.Node]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = v4.writes(
