@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import shutil
 from contextlib import contextmanager
+from importlib.metadata import version
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import TYPE_CHECKING, TypedDict, cast
 
 import myst_nb.sphinx_
 from nbformat import v4
+from packaging.version import Version
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -17,23 +19,29 @@ if TYPE_CHECKING:
     from myst_nb.sphinx_ import SphinxEnvType
 
 
+SPHINX_9 = Version(version("sphinx")) >= Version("9")
+MYST_NB_1_3_1 = Version(version("myst-nb")) >= Version("1.3.1")
+
+
 class ExtData(TypedDict, total=False):
     count: int
 
 
-def execute_cells(
-    cells: list[str], document: nodes.document, *, env: SphinxEnvType
-) -> list[nodes.Node]:
+def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = v4.writes(
         v4.new_notebook(cells=[v4.new_code_cell(cell) for cell in cells])
     )
 
     # execute notebook and append resulting nodes to document
+    env = document.settings.env
     parser = myst_nb.sphinx_.Parser()
-    parser.env = env
+    if not SPHINX_9:
+        parser.env = env
+    elif not MYST_NB_1_3_1:  # https://github.com/executablebooks/MyST-NB/pull/706
+        parser._env = env
     after_last_child = len(document.children)
-    with temp_source_code(parser.env, notebook_json):
+    with temp_source_code(env, notebook_json):
         parser.parse(notebook_json, document)
 
     # extract nodes and restore document
