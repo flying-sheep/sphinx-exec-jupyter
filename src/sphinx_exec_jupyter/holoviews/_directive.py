@@ -70,11 +70,7 @@ class HoloViewsDirective(SphinxDirective):
         ]
         n_blocks_per_backend = 3
         assert len(cells) == n_blocks_per_backend * len(backends)
-        results_raw = execute_cells(
-            cells,
-            self.state.document,
-            env=cast("SphinxEnvType", self.env),
-        )
+        results_raw = execute_cells(cells, self.state.document)
         if (len(results_raw) % n_blocks_per_backend) != 0:
             raise self.error(
                 "Unexpected number of outputs from HoloViews execution:\n"
