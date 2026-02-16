@@ -24,16 +24,16 @@ dependencies = [
 optional-dependencies.holoviews = [ "holoviews", "sphinx-design" ]
 entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.holoviews:HoloViewsMimeRenderer"
 
-[tool.hatch.envs.default]
-installer = "uv"
-features = [ "holoviews" ]
-dependencies = [ "furo", "matplotlib", "plotly" ]
-scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
-scripts.docs-clean = "rm -rf docs/_build {args}"
-scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
+[tool.hatch]
+envs.default.installer = "uv"
+envs.default.features = [ "holoviews" ]
+envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
+envs.default.scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
+envs.default.scripts.docs-clean = "rm -rf docs/_build {args}"
+envs.default.scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
 
 [tool.ruff]
 lint.extend-select = [ "CPY", "I", "TC", "UP" ]
 lint.flake8-copyright.notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
-lint.flake8-type-checking.exempt-modules = [  ]
+lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
