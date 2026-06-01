@@ -17,9 +17,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "myst-nb",
-  "nbformat",
-  "sphinx",
+  "myst-nb>=1.4",
+  "nbformat>=5.10.4",
+  "sphinx>=9.1",
 ]
 optional-dependencies.holoviews = [ "holoviews", "sphinx-design" ]
 entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.holoviews:HoloViewsMimeRenderer"
