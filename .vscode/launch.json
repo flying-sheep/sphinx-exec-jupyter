@@ -1,13 +1,12 @@
 {
-	// Verwendet IntelliSense zum Ermitteln möglicher Attribute.
-	// Zeigen Sie auf vorhandene Attribute, um die zugehörigen Beschreibungen anzuzeigen.
-	// Weitere Informationen finden Sie unter https://go.microsoft.com/fwlink/?linkid=830387
+	// https://go.microsoft.com/fwlink/?linkid=830387
 	"version": "0.2.0",
 	"configurations": [
 		{
 			"name": "Build Documentation",
 			"type": "debugpy",
 			"request": "launch",
+			"python": "${command:hatch.envInterpreter}", //always default env
 			"module": "sphinx",
 			"args": ["-M", "html", ".", "_build"],
 			"cwd": "${workspaceFolder}/docs",
