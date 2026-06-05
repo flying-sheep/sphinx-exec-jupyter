@@ -1,18 +1,36 @@
 # SPDX-License-Identifier: MPL-2.0
 
+from __future__ import annotations
+
+import asyncio
 from contextlib import contextmanager
-from functools import cache, partial
+from functools import partial
+from typing import TYPE_CHECKING
 
 from jupyter_cache.executors.utils import single_nb_execution
-from jupyter_client.manager import KernelManager
 from myst_nb.core.execute.inline import ModifiedNotebookClient
 
+if TYPE_CHECKING:
+    from sphinx_exec_jupyter._kernel_mgr import ForkingKernelManager
 
-@cache
-def get_km(code: str) -> KernelManager:
-    from . import ForkingKernelManager
 
-    return ForkingKernelManager(code)
+KM_CACHE: dict[str, ForkingKernelManager] = {}
+
+
+def get_km(code: str) -> ForkingKernelManager:
+    if code not in KM_CACHE:
+        from . import ForkingKernelManager
+
+        KM_CACHE[code] = ForkingKernelManager(code)
+    return KM_CACHE[code]
+
+
+def shutdown_kernels():
+    async def shutdown():
+        await asyncio.gather(*[km.provisioner.terminate() for km in KM_CACHE.values()])
+
+    asyncio.run(shutdown())
+    KM_CACHE.clear()
 
 
 @contextmanager
