@@ -18,6 +18,8 @@ from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import KernelProvisionerBase
 from traitlets import Instance, default
 
+from .myst import patch_myst_nb
+
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
     from collections.abc import Sequence
@@ -25,6 +27,9 @@ if TYPE_CHECKING:
     from jupyter_client import KernelConnectionInfo
     from jupyter_client.asynchronous.client import AsyncKernelClient
     from traitlets import Unicode
+
+
+__all__ = ["ForkingKernelManager", "start_new_async_kernel", "patch_myst_nb"]
 
 
 RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork_server.py")
