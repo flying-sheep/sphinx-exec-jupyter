@@ -40,17 +40,27 @@ class ForkServer:
             code = f"{self.code}\n\n{RUN_SERVER_CODE}"
             interpreter = self.cmd[0]  # TODO: better parsing
             self.process = await create_subprocess_exec(
-                interpreter, "-c", code, json.dumps(self.cmd), stdout=PIPE
+                *(interpreter, "-c", code, json.dumps(self.cmd)),
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE,
             )
 
-        self.process.send_signal(signal.SIGUSR1)
-        assert self.process.stdout
-        for _attempt in range(10):
-            if resp := await self.process.stdout.readline():
-                break
-            await asyncio.sleep(0.1)
-        else:
-            raise RuntimeError("fork server did not respond")
+        assert self.process.stdin and self.process.stdout and self.process.stderr
+        self.process.stdin.write(b"\n")
+        await self.process.stdin.drain()
+        resp = await self.process.stdout.readline()
+
+        if self.process.returncode is not None:
+            code = (
+                signal.strsignal(-self.process.returncode)
+                if self.process.returncode < 0
+                else self.process.returncode
+            )
+            stderr = await self.process.stderr.read()
+            raise RuntimeError(
+                f"Server died ({code=}): {stderr.decode('utf-8').strip()}"
+            )
         return int(resp.decode("utf-8").strip())
 
 

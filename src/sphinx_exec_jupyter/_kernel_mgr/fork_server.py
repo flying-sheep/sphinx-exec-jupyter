@@ -6,31 +6,23 @@ def __main():
 
     import json
     import os
-    import signal
     import sys
-    from threading import Event
 
     import ipykernel.kernelapp
 
-    child_event = Event()
-    stop_event = Event()
+    argv = json.loads(sys.argv[1])
 
-    assert sys.argv[1] == "-c"
-    argv = json.loads(sys.argv[2])
+    for _ in sys.stdin:
+        if child_pid := os.fork():
+            print(child_pid)
+            sys.stdout.flush()
+            continue
+        with open("/dev/null") as r, open("/dev/null", "w") as w:
+            os.dup2(r.fileno(), 0)
+            os.dup2(w.fileno(), 1)
+            os.dup2(w.fileno(), 2)
 
-    signal.signal(signal.SIGUSR1, lambda sig, frame: child_event.set())
-    signal.signal(signal.SIGINT, lambda sig, frame: stop_event.set())
-    signal.signal(signal.SIGTERM, lambda sig, frame: stop_event.set())
-
-    while not stop_event.is_set():
-        if child_event.is_set():
-            child_event.clear()
-            if child_pid := os.fork():
-                print(child_pid)
-            else:
-                ipykernel.kernelapp.launch_new_instance(argv)
-        # better signal.sleep that handles SIGINT and SIGTERM
-        stop_event.wait(timeout=1.0)
+            ipykernel.kernelapp.launch_new_instance(argv)
 
 
 __main()
