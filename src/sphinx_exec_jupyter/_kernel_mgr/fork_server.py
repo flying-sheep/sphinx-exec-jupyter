@@ -11,9 +11,7 @@ def __main():
 
     import ipykernel.kernelapp
 
-    argv: list[str] = json.loads(sys.argv[1])
-
-    for _ in sys.stdin:
+    for argv in map(json.loads, sys.stdin):
         if child_pid := os.fork():
             print(child_pid)
             sys.stdout.flush()

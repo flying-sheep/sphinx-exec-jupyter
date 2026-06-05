@@ -42,23 +42,25 @@ RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork_server.py")
 
 @dataclass
 class ForkServer:
-    cmd: tuple[str, ...]
+    interpreter: str
     code: str
     process: Process | None = field(init=False, default=None)
 
-    async def fork(self) -> int:
+    async def fork(self, cmd: Sequence[str]) -> int:
         if self.process is None:
+            # print(f"launching fork server for {self.interpreter} and {self.code!r}")
             code = f"{self.code}\n\n{RUN_SERVER_CODE}"
-            interpreter = self.cmd[0]  # TODO: better parsing
             self.process = await create_subprocess_exec(
-                *(interpreter, "-c", code, json.dumps(self.cmd)),
+                *(self.interpreter, "-c", code),
                 stdin=PIPE,
                 stdout=PIPE,
                 stderr=PIPE,
             )
+        else:
+            assert self.interpreter == cmd[0]
 
         assert self.process.stdin and self.process.stdout and self.process.stderr
-        self.process.stdin.write(b"\n")
+        self.process.stdin.write(json.dumps(cmd).encode("utf-8") + b"\n")
         await self.process.stdin.drain()
         resp = await self.process.stdout.readline()
 
@@ -75,9 +77,6 @@ class ForkServer:
         return int(resp.decode("utf-8").strip())
 
 
-type Key = tuple[tuple[str, ...], str]
-
-
 @dataclass
 class ForkingKernelProvisioner(KernelProvisionerBase):
     _: KW_ONLY
@@ -92,7 +91,7 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
     server: ForkServer | None = field(init=False, default=None)
     pid: int | None = field(init=False, default=None)
 
-    SERVERS: ClassVar[dict[Key, ForkServer]] = {}
+    SERVERS: ClassVar[dict[tuple[str, str], ForkServer]] = {}
 
     @property
     def code(self) -> str:
@@ -132,13 +131,13 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
     ) -> KernelConnectionInfo:
         cls = type(self)
         self.server = cls.SERVERS.setdefault(
-            (tuple(cmd), self.code), ForkServer(tuple(cmd), self.code)
+            (cmd[0], self.code), ForkServer(cmd[0], self.code)
         )
-        self.pid = await self.server.fork()
+        self.pid = await self.server.fork(cmd)
         return self.connection_info
 
     async def cleanup(self, restart: bool = False) -> None:
-        await LocalProvisioner.cleanup(self, restart=restart)
+        await LocalProvisioner.cleanup(cast("LocalProvisioner", self), restart=restart)
 
     async def pre_launch(
         self, *, extra_arguments: Sequence[str] = (), **kwargs: object
