@@ -1,23 +1,32 @@
 # SPDX-License-Identifier: MPL-2.0
 
 from contextlib import contextmanager
-from functools import partial
+from functools import cache, partial
 
 from jupyter_cache.executors.utils import single_nb_execution
-from myst_nb.core.execute import cache, direct, inline
+from jupyter_client.manager import KernelManager
+from myst_nb.core.execute.inline import ModifiedNotebookClient
 
-ModifiedNotebookClient = inline.ModifiedNotebookClient
+
+@cache
+def get_km(code: str) -> KernelManager:
+    from . import ForkingKernelManager
+
+    return ForkingKernelManager(code)
 
 
 @contextmanager
-def patch_myst_nb(code: str):
-    from . import ForkingKernelManager
+def patch_myst_nb(code: str, *, kernel_name: str):
+    from myst_nb.core.execute import cache, direct, inline
 
-    km = ForkingKernelManager(code)
+    km = get_km(code)
 
-    cache.single_nb_execution = partial(single_nb_execution, km=km)
-    direct.single_nb_execution = partial(single_nb_execution, km=km)
-    inline.ModifiedNotebookClient = partial(ModifiedNotebookClient, km=km)
+    cache.single_nb_execution = direct.single_nb_execution = partial(
+        single_nb_execution, km=km, kernel_name=kernel_name
+    )
+    inline.ModifiedNotebookClient = partial(
+        ModifiedNotebookClient, km=km, kernel_name=kernel_name
+    )
 
     try:
         yield
