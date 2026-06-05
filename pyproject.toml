@@ -32,7 +32,7 @@ envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
 envs.default.scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
 envs.default.scripts.docs-clean = "rm -rf docs/_build {args}"
 envs.default.scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
-envs.hatch-test.dependencies = [ "pytest-tornasync" ]
+envs.hatch-test.dependencies = [ "anyio" ]
 envs.hatch-test.matrix = [
   { python = [ "3.14", "3.12" ] },
 ]
@@ -42,3 +42,12 @@ lint.extend-select = [ "CPY", "I", "TC", "UP" ]
 lint.flake8-copyright.notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
+
+[tool.pytest]
+strict = true
+anyio_mode = "auto"
+addopts = [
+  "--import-mode=importlib",
+  "--doctest-modules",
+  "--pyargs",
+]

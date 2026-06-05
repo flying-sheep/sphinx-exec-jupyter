@@ -1,28 +1,32 @@
 # SPDX-License-Identifier: MPL-2.0
 
+user_ns = globals()
+
 
 def __main():
-    globals().pop("__main", None)
-
     import json
     import os
     import sys
+    import tempfile
 
     import ipykernel.kernelapp
 
-    argv = json.loads(sys.argv[1])
+    argv: list[str] = json.loads(sys.argv[1])
 
     for _ in sys.stdin:
         if child_pid := os.fork():
             print(child_pid)
             sys.stdout.flush()
             continue
-        with open("/dev/null") as r, open("/dev/null", "w") as w:
-            os.dup2(r.fileno(), 0)
-            os.dup2(w.fileno(), 1)
-            os.dup2(w.fileno(), 2)
+        with (
+            open("/dev/null") as r,
+            tempfile.NamedTemporaryFile("w", prefix=f"kernel-{os.getpid()}-") as w,
+        ):
+            os.dup2(r.fileno(), sys.stdin.fileno())
+            os.dup2(w.fileno(), sys.stdout.fileno())
+            os.dup2(w.fileno(), sys.stderr.fileno())
 
-            ipykernel.kernelapp.launch_new_instance(argv)
+            ipykernel.kernelapp.launch_new_instance(argv, user_ns=user_ns)
 
 
 __main()

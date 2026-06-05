@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 from jupyter_client import LocalPortCache
 from jupyter_client.kernelspec import KernelSpec, KernelSpecManager
 from jupyter_client.manager import AsyncKernelManager
+from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import KernelProvisionerBase
 from traitlets import Instance, default
 
@@ -127,11 +128,15 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
         return self.connection_info
 
     async def cleanup(self, restart: bool = False) -> None:
-        pass
+        await LocalProvisioner.cleanup(self, restart=restart)
 
     async def pre_launch(
         self, *, extra_arguments: Sequence[str] = (), **kwargs: object
     ) -> dict[str, object]:
+        """This is basically copied from LocalKernelProvisioner.
+
+        But we can’t just use that like `cleanup` above because it calls `super()`.
+        """
         assert self.kernel_spec
         km = self.parent
         if km.cache_ports and not self.ports_cached:
@@ -142,13 +147,13 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
             km.hb_port = lpc.find_available_port(km.ip)
             km.control_port = lpc.find_available_port(km.ip)
             self.ports_cached = True
-        if env := cast("dict | None", kwargs.get("env")):
+        if env := cast("dict[str, object] | None", kwargs.get("env")):
             jupyter_session = env.get("JPY_SESSION_NAME", "")
             km.write_connection_file(jupyter_session=jupyter_session)
         else:
             km.write_connection_file()
         self.connection_info = km.get_connection_info()
-        kernel_cmd = [*self.kernel_spec.argv, *extra_arguments]
+        kernel_cmd = km.format_kernel_cmd(extra_arguments=list(extra_arguments))
         return await super().pre_launch(cmd=kernel_cmd, **kwargs)
 
 
@@ -172,6 +177,7 @@ class ForkingKernelManager(AsyncKernelManager):
         return ForkingKernelSpecManager(parent=self)
 
     code: str
+    provisioner: ForkingKernelProvisioner
 
     def __init__(self, code: str, **kw):
         super().__init__(**kw)
