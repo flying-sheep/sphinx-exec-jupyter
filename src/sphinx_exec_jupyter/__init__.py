@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Sphinx extension to run code snippets using Jupyter machinery."""
+
 from __future__ import annotations
 
 from importlib.metadata import version
@@ -18,6 +20,7 @@ __all__ = ["setup", "ExecJupyterDirective"]
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
+    """Add directive(s) and settings to Sphinx."""
     app.setup_extension(extname="myst_nb")
     app.add_config_value("exec_jupyter_code", "", "env")
     app.add_config_value("exec_jupyter_kernel", "python3", "env")

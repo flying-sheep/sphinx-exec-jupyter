@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Kernel manager for Jupyter kernels started from forked processes."""
 
 from __future__ import annotations
 
@@ -142,7 +143,7 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
     async def pre_launch(
         self, *, extra_arguments: Sequence[str] = (), **kwargs: object
     ) -> dict[str, object]:
-        """This is basically copied from LocalKernelProvisioner.
+        """Prepare for the kernel launch in a way that’s basically copied from LocalKernelProvisioner.
 
         But we can’t just use that like `cleanup` above because it calls `super()`.
         """
@@ -200,7 +201,7 @@ async def start_new_async_kernel(
     kernel_name: str = "python",
     **kwargs: object,
 ) -> tuple[ForkingKernelManager, AsyncKernelClient]:
-    """Start a new kernel, and return its Manager and Client"""
+    """Start a new kernel, and return its Manager and Client."""
     km = ForkingKernelManager(code, kernel_name=kernel_name)
     await km.start_kernel(**kwargs)
     kc = km.client()

@@ -39,7 +39,9 @@ envs.hatch-test.matrix = [
 ]
 
 [tool.ruff]
-lint.extend-select = [ "CPY", "I", "TC", "UP" ]
+lint.extend-select = [ "CPY", "D", "I", "TC", "UP" ]
+lint.ignore = [ "D203", "D213" ]
+lint.per-file-ignores."tests/**/*" = [ "D" ]
 lint.flake8-copyright.notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true

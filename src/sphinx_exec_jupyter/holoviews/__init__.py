@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Holoviews sub-extension for sphinx-exec-jupyter."""
+
 from __future__ import annotations
 
 from importlib.metadata import version
@@ -21,6 +23,7 @@ __all__ = [
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
+    """Add holoviews-specific directive and setting to Sphinx."""
     app.add_directive("holoviews", HoloViewsDirective)
     app.add_config_value("holoviews_backends", ["bokeh"], "env", {list})
 

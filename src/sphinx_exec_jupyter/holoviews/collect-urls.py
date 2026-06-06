@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Code executed as a notebook cell to collect JS and CSS URLs."""
+
 import json
 
 from bokeh.model import Model
