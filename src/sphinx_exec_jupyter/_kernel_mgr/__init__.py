@@ -49,7 +49,7 @@ class ForkServer:
     async def fork(self, cmd: Sequence[str]) -> int:
         if self.process is None:
             # print(f"launching fork server for {self.interpreter} and {self.code!r}")
-            code = f"{self.code}\n\n{RUN_SERVER_CODE}"
+            code = RUN_SERVER_CODE.replace('"USER_CODE_INSERTION_POINT"', self.code)
             self.process = await create_subprocess_exec(
                 *(self.interpreter, "-c", code),
                 stdin=PIPE,

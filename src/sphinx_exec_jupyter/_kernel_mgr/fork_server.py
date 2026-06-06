@@ -1,5 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 
+import builtins
+
+setattr(builtins, "__IPYTHON__", True)
+
+del builtins
+
+"USER_CODE_INSERTION_POINT"
+
 user_ns = globals().copy()
 
 
