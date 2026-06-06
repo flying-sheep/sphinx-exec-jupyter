@@ -22,12 +22,12 @@ class StartKernel(Protocol):
 
 @pytest.fixture
 async def start_kernel() -> AsyncGenerator[StartKernel]:
-    from sphinx_exec_jupyter._kernel_mgr import start_new_async_kernel
+    from sphinx_exec_jupyter._kernel_mgr import start_new_fork_kernel
 
     mgrs: list[tuple[ForkingKernelManager, AsyncKernelClient]] = []
 
     async def fn(code: str, **kwargs):
-        km, kc = await start_new_async_kernel(code, **kwargs)
+        km, kc = await start_new_fork_kernel(code, **kwargs)
         mgrs.append((km, kc))
         return km, kc
 

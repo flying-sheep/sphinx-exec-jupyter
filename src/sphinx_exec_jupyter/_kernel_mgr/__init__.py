@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ForkingKernelManager",
-    "start_new_async_kernel",
+    "start_new_fork_kernel",
     "patch_myst_nb",
     "shutdown_kernels",
 ]
@@ -42,7 +42,9 @@ RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork_server.py")
 
 
 @dataclass
-class ForkServer:
+class KernelForkServer:
+    """A server that executes code and allows forking off kernels after."""
+
     interpreter: str
     code: str
     process: Process | None = field(init=False, default=None)
@@ -79,7 +81,7 @@ class ForkServer:
 
 
 @dataclass
-class ForkingKernelProvisioner(KernelProvisionerBase):
+class ForkingProvisioner(KernelProvisionerBase):
     _: KW_ONLY
 
     # factory API
@@ -89,10 +91,10 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
 
     # internal state
     ports_cached: bool = field(init=False, default=False)
-    server: ForkServer | None = field(init=False, default=None)
+    server: KernelForkServer | None = field(init=False, default=None)
     pid: int | None = field(init=False, default=None)
 
-    SERVERS: ClassVar[dict[tuple[str, str], ForkServer]] = {}
+    SERVERS: ClassVar[dict[tuple[str, str], KernelForkServer]] = {}
 
     @property
     def code(self) -> str:
@@ -132,7 +134,7 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
     ) -> KernelConnectionInfo:
         cls = type(self)
         self.server = cls.SERVERS.setdefault(
-            (cmd[0], self.code), ForkServer(cmd[0], self.code)
+            (cmd[0], self.code), KernelForkServer(cmd[0], self.code)
         )
         self.pid = await self.server.fork(cmd)
         return self.connection_info
@@ -168,10 +170,12 @@ class ForkingKernelProvisioner(KernelProvisionerBase):
 
 
 class ForkingKernelSpec(KernelSpec):
+    """A KernelSpec that defaults to a forking provisioner."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.metadata["kernel_provisioner"] = dict(
-            provisioner_name="forking_provisioner"
+        self.metadata.setdefault(
+            "kernel_provisioner", dict(provisioner_name="forking_provisioner")
         )
 
 
@@ -180,6 +184,15 @@ class ForkingKernelSpecManager(KernelSpecManager):
 
 
 class ForkingKernelManager(AsyncKernelManager):
+    """A KernelManager that starts kernels from forked processes.
+
+    Parameters
+    ----------
+    code
+        Code to execute before forking off a kernel.
+
+    """
+
     kernel_spec_manager = Instance(ForkingKernelSpecManager)
 
     @default("kernel_spec_manager")
@@ -187,14 +200,14 @@ class ForkingKernelManager(AsyncKernelManager):
         return ForkingKernelSpecManager(parent=self)
 
     code: str
-    provisioner: ForkingKernelProvisioner
+    provisioner: ForkingProvisioner
 
     def __init__(self, code: str, **kw):
         super().__init__(**kw)
         self.code = code
 
 
-async def start_new_async_kernel(
+async def start_new_fork_kernel(
     code: str,
     *,
     startup_timeout: float = 60,

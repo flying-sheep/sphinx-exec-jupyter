@@ -14,14 +14,14 @@ This extension adds at least one directive (see `sphinx_exec_jupyter.holoviews`_
 It can be configured with the following settings:
 
 .. confval:: exec_jupyter_code
-    :type: :class:`str`
+    :type: ``str``
 
     Prefix code to execute before the code in ``exec-jupyter`` or ``holoviews``.
     Kernels are started from forked processes after this code is executed,
     so it can be used for long-running initialization code (e.g. slow imports).
 
 .. confval:: exec_jupyter_kernel
-    :type: :class:`str`
+    :type: ``str``
 
     Name of the Jupyter kernel to use.
     If not set, the default kernel is used.
