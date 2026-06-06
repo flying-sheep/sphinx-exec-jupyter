@@ -40,13 +40,22 @@ async def start_kernel() -> AsyncGenerator[StartKernel]:
             await km.provisioner.terminate()
 
 
-async def test_launch(start_kernel: StartKernel) -> None:
-    km, kc = await start_kernel("foo = 1")
+@pytest.mark.parametrize(
+    ("preload", "code", "resp_str"),
+    [
+        pytest.param("foo = 1", "foo", "1", id="assign"),
+        pytest.param("import builtins", "builtins.__IPYTHON__", "True", id="enhance"),
+    ],
+)
+async def test_launch(
+    start_kernel: StartKernel, preload: str, code: str, resp_str: str
+) -> None:
+    km, kc = await start_kernel(preload)
     outputs = []
 
-    resp = await kc.execute_interactive("foo", output_hook=outputs.append, timeout=0.2)
+    resp = await kc.execute_interactive(code, output_hook=outputs.append, timeout=0.2)
 
     assert resp["msg_type"] == "execute_reply"
     assert resp["content"]["status"] == "ok"
     [result] = (output for output in outputs if output["msg_type"] == "execute_result")
-    assert result["content"]["data"]["text/plain"] == "1"
+    assert result["content"]["data"]["text/plain"] == resp_str

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 
-user_ns = globals()
+user_ns = globals().copy()
 
 
 def __main():
