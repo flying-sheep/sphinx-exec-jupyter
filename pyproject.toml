@@ -32,8 +32,8 @@ envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
 envs.default.scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
 envs.default.scripts.docs-clean = "rm -rf docs/_build {args}"
 envs.default.scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
-envs.hatch-test.dependencies = [ "anyio" ]
 envs.hatch-test.features = [ "holoviews" ]
+envs.hatch-test.dependencies = [ "anyio" ]
 envs.hatch-test.matrix = [
   { python = [ "3.14", "3.12" ] },
 ]
@@ -45,10 +45,10 @@ lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
 
 [tool.pytest]
-strict = true
-anyio_mode = "auto"
 addopts = [
   "--import-mode=importlib",
   "--doctest-modules",
   "--pyargs",
 ]
+anyio_mode = "auto"
+strict = true
