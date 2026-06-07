@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
 from contextlib import contextmanager
 from functools import partial
 from typing import TYPE_CHECKING
 
-from jupyter_cache.executors.utils import single_nb_execution
-from myst_nb.core.execute.inline import ModifiedNotebookClient
+import nbclient
 
 if TYPE_CHECKING:
+    from jupyter_client.manager import KernelManager
+    from nbformat import NotebookNode
+
     from sphinx_exec_jupyter._kernel_mgr import ForkingKernelManager
 
 
@@ -25,30 +26,35 @@ def get_km(code: str) -> ForkingKernelManager:
     return KM_CACHE[code]
 
 
-def shutdown_kernels():
-    async def shutdown():
-        await asyncio.gather(*[km.provisioner.terminate() for km in KM_CACHE.values()])
+def execute(
+    nb: NotebookNode,
+    cwd: str | None = None,
+    km: KernelManager | None = None,
+    **kwargs: object,
+) -> NotebookNode:
+    """Execute notebook.
 
-    asyncio.run(shutdown())
-    KM_CACHE.clear()
+    Identical to the patched version except for `cleanup_kc=True`.
+    """
+    resources = {}
+    if cwd is not None:
+        resources["metadata"] = {"path": cwd}
+    return nbclient.NotebookClient(nb=nb, resources=resources, km=km, **kwargs).execute(
+        cleanup_kc=True
+    )
 
 
 @contextmanager
 def patch_myst_nb(code: str, *, kernel_name: str):
-    from myst_nb.core.execute import cache, direct, inline
+    import jupyter_cache.executors.utils
 
     km = get_km(code)
 
-    cache.single_nb_execution = direct.single_nb_execution = partial(
-        single_nb_execution, km=km, kernel_name=kernel_name
-    )
-    inline.ModifiedNotebookClient = partial(
-        ModifiedNotebookClient, km=km, kernel_name=kernel_name
+    jupyter_cache.executors.utils.executenb = partial(
+        execute, km=km, kernel_name=kernel_name, shutdown_kernel="immediate"
     )
 
     try:
         yield
     finally:
-        cache.single_nb_execution = single_nb_execution
-        direct.single_nb_execution = single_nb_execution
-        inline.ModifiedNotebookClient = ModifiedNotebookClient
+        jupyter_cache.executors.utils.executenb = nbclient.execute

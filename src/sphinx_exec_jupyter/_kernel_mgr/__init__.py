@@ -19,7 +19,7 @@ from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import KernelProvisionerBase
 from traitlets import Instance, default
 
-from .myst import patch_myst_nb, shutdown_kernels
+from .myst import patch_myst_nb
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
@@ -30,12 +30,7 @@ if TYPE_CHECKING:
     from traitlets import Unicode
 
 
-__all__ = [
-    "ForkingKernelManager",
-    "start_new_fork_kernel",
-    "patch_myst_nb",
-    "shutdown_kernels",
-]
+__all__ = ["ForkingKernelManager", "start_new_fork_kernel", "patch_myst_nb"]
 
 
 RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork_server.py")
@@ -124,6 +119,7 @@ class ForkingProvisioner(KernelProvisionerBase):
     async def kill(self, restart: bool = False) -> None:
         assert self.pid
         os.kill(self.pid, signal.SIGKILL)
+        self.pid = None  # somehow poll doesn’t work after sigkill
 
     async def terminate(self, restart: bool = False) -> None:
         assert self.pid

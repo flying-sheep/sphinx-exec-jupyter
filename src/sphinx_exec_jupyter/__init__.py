@@ -9,8 +9,6 @@ from typing import TYPE_CHECKING
 from sphinx.errors import ExtensionError
 from sphinx.util.typing import ExtensionMetadata
 
-from sphinx_exec_jupyter._kernel_mgr import shutdown_kernels
-
 from ._directive import ExecJupyterDirective
 
 if TYPE_CHECKING:
@@ -30,8 +28,6 @@ def setup(app: Sphinx) -> ExtensionMetadata:
         app.setup_extension("sphinx_exec_jupyter.holoviews")
     except ExtensionError:
         pass
-
-    app.connect("build-finished", lambda app, config: shutdown_kernels())
 
     return ExtensionMetadata(
         version=version("sphinx-exec-jupyter"),
