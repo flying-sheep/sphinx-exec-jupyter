@@ -120,6 +120,7 @@ class ForkingProvisioner(KernelProvisionerBase):
         assert self.pid
         os.kill(self.pid, signal.SIGKILL)
         self.pid = None  # somehow poll doesn’t work after sigkill
+        await self.cleanup()
 
     async def terminate(self, restart: bool = False) -> None:
         assert self.pid
