@@ -35,4 +35,5 @@ def __main():
             ipykernel.kernelapp.launch_new_instance(argv, user_ns=user_ns)
 
 
-__main()
+if __name__ == "__main__":
+    __main()

@@ -2,42 +2,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, cast
 
+import jupyter_cache.executors.utils as jce
+import nbformat
 import pytest
 
+from sphinx_exec_jupyter._kernel_mgr import ForkingProvisioner, patch_myst_nb
+
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
-
-    from jupyter_client.asynchronous.client import AsyncKernelClient
-
-    from sphinx_exec_jupyter._kernel_mgr import ForkingKernelManager
-
-
-class StartKernel(Protocol):
-    async def __call__(
-        self, code: str, **kwargs
-    ) -> tuple[ForkingKernelManager, AsyncKernelClient]: ...
-
-
-@pytest.fixture
-async def start_kernel() -> AsyncGenerator[StartKernel]:
-    from sphinx_exec_jupyter._kernel_mgr import start_new_fork_kernel
-
-    mgrs: list[tuple[ForkingKernelManager, AsyncKernelClient]] = []
-
-    async def fn(code: str, **kwargs):
-        km, kc = await start_new_fork_kernel(code, **kwargs)
-        mgrs.append((km, kc))
-        return km, kc
-
-    try:
-        yield fn
-    finally:
-        for km, kc in mgrs:
-            kc.stop_channels()
-            # km.shutdown_kernel takes a long time
-            await km.provisioner.terminate()
+    from nbformat_types.versions import current as nbt
+    from pytest_mock import MockerFixture
 
 
 @pytest.mark.parametrize(
@@ -47,15 +22,24 @@ async def start_kernel() -> AsyncGenerator[StartKernel]:
         pytest.param("import builtins", "builtins.__IPYTHON__", "True", id="enhance"),
     ],
 )
-async def test_launch(
-    start_kernel: StartKernel, preload: str, code: str, resp_str: str
-) -> None:
-    km, kc = await start_kernel(preload)
-    outputs = []
+def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) -> None:
+    prov = mocker.spy(ForkingProvisioner, "__init__")
+    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell(code)])
 
-    resp = await kc.execute_interactive(code, output_hook=outputs.append, timeout=0.2)
+    with patch_myst_nb(preload, kernel_name="python3"):
+        node = cast("nbt.Document", jce.executenb(nb))
 
-    assert resp["msg_type"] == "execute_reply"
-    assert resp["content"]["status"] == "ok"
-    [result] = (output for output in outputs if output["msg_type"] == "execute_result")
-    assert result["content"]["data"]["text/plain"] == resp_str
+    assert prov.call_count == 1
+    [code_cell] = node["cells"]
+    assert code_cell["cell_type"] == "code"
+    [result] = code_cell["outputs"]
+    assert result["output_type"] == "execute_result"
+    assert result["data"]["text/plain"] == resp_str
+
+
+def test_shutdown(subtests: pytest.Subtests):
+    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
+
+    for attempt in range(3):
+        with subtests.test(attempt=attempt), patch_myst_nb("", kernel_name="python3"):
+            jce.executenb(nb)

@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from jupyter_client import KernelConnectionInfo
-    from jupyter_client.asynchronous.client import AsyncKernelClient
     from traitlets import Unicode
 
 
@@ -202,25 +201,3 @@ class ForkingKernelManager(AsyncKernelManager):
     def __init__(self, code: str, **kw):
         super().__init__(**kw)
         self.code = code
-
-
-async def start_new_fork_kernel(
-    code: str,
-    *,
-    startup_timeout: float = 60,
-    kernel_name: str = "python",
-    **kwargs: object,
-) -> tuple[ForkingKernelManager, AsyncKernelClient]:
-    """Start a new kernel, and return its Manager and Client."""
-    km = ForkingKernelManager(code, kernel_name=kernel_name)
-    await km.start_kernel(**kwargs)
-    kc = km.client()
-    kc.start_channels()
-    try:
-        await kc.wait_for_ready(timeout=startup_timeout)
-    except RuntimeError:
-        kc.stop_channels()
-        await km.shutdown_kernel()
-        raise
-
-    return km, kc
