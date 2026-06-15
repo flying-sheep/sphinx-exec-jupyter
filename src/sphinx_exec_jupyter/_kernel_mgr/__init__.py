@@ -103,13 +103,14 @@ class ForkingProvisioner(KernelProvisionerBase):
         try:
             os.kill(self.pid, 0)
         except ProcessLookupError:
+            self.pid = None
             return await self.wait()
         return None
 
     async def wait(self) -> int | None:
         assert self.pid
-        _pid, status = await asyncio.to_thread(os.waitpid, self.pid, 0)
-        return os.waitstatus_to_exitcode(status)
+        pid, status = await asyncio.to_thread(os.waitpid, self.pid, 0)
+        assert pid == self.pid
 
     async def send_signal(self, signum: int) -> None:
         assert self.pid
@@ -118,8 +119,6 @@ class ForkingProvisioner(KernelProvisionerBase):
     async def kill(self, restart: bool = False) -> None:
         assert self.pid
         os.kill(self.pid, signal.SIGKILL)
-        self.pid = None  # somehow poll doesn’t work after sigkill
-        await self.cleanup()
 
     async def terminate(self, restart: bool = False) -> None:
         assert self.pid

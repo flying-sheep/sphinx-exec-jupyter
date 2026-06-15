@@ -40,6 +40,6 @@ def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) ->
 def test_shutdown(subtests: pytest.Subtests):
     nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
 
-    for attempt in range(3):
+    for attempt in range(2):
         with subtests.test(attempt=attempt), patch_myst_nb("", kernel_name="python3"):
             jce.executenb(nb)

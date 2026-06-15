@@ -53,4 +53,5 @@ addopts = [
   "--pyargs",
 ]
 anyio_mode = "auto"
+filterwarnings = [ "error" ]
 strict = true
