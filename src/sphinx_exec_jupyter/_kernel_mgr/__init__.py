@@ -3,14 +3,13 @@
 
 from __future__ import annotations
 
-import asyncio
 import importlib.resources
 import json
 import os
 import signal
 from asyncio.subprocess import PIPE, create_subprocess_exec
 from dataclasses import KW_ONLY, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload
 
 from jupyter_client import LocalPortCache
 from jupyter_client.kernelspec import KernelSpec, KernelSpecManager
@@ -24,12 +23,44 @@ from .myst import patch_myst_nb
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
     from collections.abc import Sequence
+    from typing import Literal
 
     from jupyter_client import KernelConnectionInfo
     from traitlets import Unicode
 
 
-__all__ = ["ForkingKernelManager", "start_new_fork_kernel", "patch_myst_nb"]
+__all__ = ["ForkingKernelManager", "start_new_fork_kernel", "patch_myst_nb", "Cmd"]
+
+
+class ForkCmd(TypedDict):
+    cmd: Literal["fork"]
+    argv: Sequence[str]
+
+
+class ForkResp(TypedDict):
+    pid: int
+
+
+class WaitExitCmd(TypedDict):
+    cmd: Literal["wait"]
+    pid: int
+
+
+class WaitExitResp(TypedDict):
+    code: int
+
+
+class ExitCodeCmd(TypedDict):
+    cmd: Literal["exit_code"]
+    pid: int
+
+
+class ExitCodeResp(TypedDict):
+    code: int | None
+
+
+type Cmd = ForkCmd | WaitExitCmd | ExitCodeCmd
+type Resp = ForkResp | WaitExitResp | ExitCodeResp
 
 
 RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork_server.py")
@@ -45,23 +76,38 @@ class KernelForkServer:
 
     async def fork(self, cmd: Sequence[str]) -> int:
         if self.process is None:
-            # print(f"launching fork server for {self.interpreter} and {self.code!r}")
             code = RUN_SERVER_CODE.replace('"USER_CODE_INSERTION_POINT"', self.code)
             self.process = await create_subprocess_exec(
-                *(self.interpreter, "-c", code),
-                stdin=PIPE,
-                stdout=PIPE,
-                stderr=PIPE,
+                self.interpreter, "-c", code, stdin=PIPE, stdout=PIPE, stderr=PIPE
             )
         else:
             assert self.interpreter == cmd[0]
 
-        assert self.process.stdin and self.process.stdout and self.process.stderr
+        resp = await self._send_cmd(ForkCmd(cmd="fork", argv=cmd))
+        return resp["pid"]
+
+    async def get_exit_code(self, pid: int) -> int | None:
+        if self.process is None:
+            return None
+        resp = await self._send_cmd(ExitCodeCmd(cmd="exit_code", pid=pid))
+        return resp["code"]
+
+    async def wait(self, pid: int) -> int:
+        resp = await self._send_cmd(WaitExitCmd(cmd="wait", pid=pid))
+        return resp["code"]
+
+    @overload
+    async def _send_cmd(self, cmd: ForkCmd) -> ForkResp: ...
+    @overload
+    async def _send_cmd(self, cmd: WaitExitCmd) -> WaitExitResp: ...
+    @overload
+    async def _send_cmd(self, cmd: ExitCodeCmd) -> ExitCodeResp: ...
+    async def _send_cmd(self, cmd: Cmd) -> Resp:
+        assert self.process and self.process.stdin and self.process.stdout
         self.process.stdin.write(json.dumps(cmd).encode("utf-8") + b"\n")
         await self.process.stdin.drain()
-        resp = await self.process.stdout.readline()
-
         if self.process.returncode is not None:
+            assert self.process.stderr
             code = (
                 signal.strsignal(-self.process.returncode)
                 if self.process.returncode < 0
@@ -71,7 +117,7 @@ class KernelForkServer:
             raise RuntimeError(
                 f"Server died ({code=}): {stderr.decode('utf-8').strip()}"
             )
-        return int(resp.decode("utf-8").strip())
+        return json.loads(await self.process.stdout.readline())
 
 
 @dataclass
@@ -99,18 +145,22 @@ class ForkingProvisioner(KernelProvisionerBase):
         return self.pid is not None
 
     async def poll(self) -> int | None:
-        assert self.pid
+        if self.pid is None:
+            return None
         try:
             os.kill(self.pid, 0)
         except ProcessLookupError:
+            code = await self.server.get_exit_code(self.pid) if self.server else None
             self.pid = None
-            return await self.wait()
+            return code if code is not None else 1
         return None
 
     async def wait(self) -> int | None:
-        assert self.pid
-        pid, status = await asyncio.to_thread(os.waitpid, self.pid, 0)
-        assert pid == self.pid
+        if self.pid is None or not self.server:
+            return 0
+        code = await self.server.wait(self.pid)
+        self.pid = None
+        return code
 
     async def send_signal(self, signum: int) -> None:
         assert self.pid
@@ -200,3 +250,16 @@ class ForkingKernelManager(AsyncKernelManager):
     def __init__(self, code: str, **kw):
         super().__init__(**kw)
         self.code = code
+
+    def __getattribute__(self, name: str):
+        """Renew ZMQ context for new kernel."""
+        if name == "context":
+            ctx = super().__getattribute__(name)
+            if ctx and hasattr(ctx, "closed") and ctx.closed:
+                import zmq.asyncio
+
+                new_ctx = zmq.asyncio.Context()
+                super().__setattr__("context", new_ctx)
+                return new_ctx
+            return ctx
+        return super().__getattribute__(name)
