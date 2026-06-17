@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, cast
 
 import jupyter_cache.executors.utils as jce
@@ -29,7 +30,7 @@ def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) ->
     with patch_myst_nb(preload, kernel_name="python3"):
         node = cast("nbt.Document", jce.executenb(nb))
 
-    assert prov.call_count == 1
+    assert prov.call_count == 1, "didn’t actually use our provisioner"
     [code_cell] = node["cells"]
     assert code_cell["cell_type"] == "code"
     [result] = code_cell["outputs"]
@@ -43,3 +44,23 @@ def test_shutdown(subtests: pytest.Subtests):
     for attempt in range(2):
         with subtests.test(attempt=attempt), patch_myst_nb("", kernel_name="python3"):
             jce.executenb(nb)
+
+
+def test_caching(subtests: pytest.Subtests):
+    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
+
+    SLEEP = timedelta(milliseconds=400)
+
+    times: list[timedelta] = []
+    for _attempt in range(3):
+        start = datetime.now(tz=UTC)
+        with patch_myst_nb(
+            f"import time; time.sleep({SLEEP.total_seconds()})", kernel_name="python3"
+        ):
+            jce.executenb(nb)
+        times.append(datetime.now(tz=UTC) - start)
+
+    # the first attempt should be longer than subsequent ones
+    # since it’s the one that sets up the interpreter and then sleeps
+    assert times[0] >= times[1] + SLEEP
+    assert times[0] >= times[2] + SLEEP

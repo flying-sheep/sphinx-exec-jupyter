@@ -250,16 +250,3 @@ class ForkingKernelManager(AsyncKernelManager):
     def __init__(self, code: str, **kw):
         super().__init__(**kw)
         self.code = code
-
-    def __getattribute__(self, name: str):
-        """Renew ZMQ context for new kernel."""
-        if name == "context":
-            ctx = super().__getattribute__(name)
-            if ctx and hasattr(ctx, "closed") and ctx.closed:
-                import zmq.asyncio
-
-                new_ctx = zmq.asyncio.Context()
-                super().__setattr__("context", new_ctx)
-                return new_ctx
-            return ctx
-        return super().__getattribute__(name)
