@@ -1,9 +1,12 @@
 # sphinx-exec-jupyter
 
+[![PyPI][pypi badge]][pypi]
 [![Documentation Status][doc badge]][docs]
 [![Test Status][test badge]][tests]
 [![Coverage Status][codecov badge]][codecov]
 
+[pypi badge]: https://img.shields.io/pypi/v/sphinx-exec-jupyter.svg
+[pypi]: https://pypi.org/project/sphinx-exec-jupyter
 [doc badge]: https://readthedocs.org/projects/sphinx-exec-jupyter/badge/
 [docs]: https://sphinx-exec-jupyter.readthedocs.io/
 [test badge]: https://github.com/flying-sheep/sphinx-exec-jupyter/actions/workflows/ci.yml/badge.svg
