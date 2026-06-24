@@ -72,4 +72,5 @@ filterwarnings = [ "error" ]
 strict = true
 
 [tool.coverage]
-run.patch = [ "subprocess", "fork" ]
+run.patch = [ "subprocess" ]
+run.source = "."
