@@ -54,6 +54,8 @@ jobs:
       - name: Install dependencies
         run: uvx hatch -v env create ${{ matrix.env.name }}
       - name: Run tests
+        env:
+          COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
         run: |
           uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto --junitxml=test-results.xml
           uvx hatch run ${{ matrix.env.name }}:cov-combine
