@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
+from __future__ import annotations
+
 import builtins
 
 builtins.__IPYTHON__ = True
@@ -18,11 +20,13 @@ def __main() -> None:  # noqa: C901
     import sys
     import tempfile
     from pathlib import Path
-    from typing import TYPE_CHECKING, Never
+    from typing import TYPE_CHECKING
 
     import ipykernel.kernelapp
 
     if TYPE_CHECKING:
+        from typing import Never
+
         from sphinx_exec_jupyter._kernel_mgr import Cmd
 
     exit_codes: dict[int, int] = {}
