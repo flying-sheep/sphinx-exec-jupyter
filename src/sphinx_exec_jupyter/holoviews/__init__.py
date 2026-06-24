@@ -27,8 +27,12 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_directive("holoviews", HoloViewsDirective)
     app.add_config_value("holoviews_backends", ["bokeh"], "env", {list})
 
+    # `parallel_read_safe` is `False` because of a race condition in patching myst_nb
+    # the other directive uses only one preload script per run so that’s fine.
+    # See https://github.com/executablebooks/MyST-NB/issues/574
+    # and https://github.com/executablebooks/MyST-NB/issues/643
     return ExtensionMetadata(
         version=version("sphinx-exec-jupyter"),
-        parallel_read_safe=True,
+        parallel_read_safe=False,
         parallel_write_safe=True,
     )
