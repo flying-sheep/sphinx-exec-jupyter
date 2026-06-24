@@ -144,16 +144,13 @@ class ForkingProvisioner(KernelProvisionerBase):
     def has_process(self) -> bool:
         return self.pid is not None
 
-    async def poll(self) -> int | None:
-        if self.pid is None:
-            return None
-        try:
-            os.kill(self.pid, 0)
-        except ProcessLookupError:
-            code = await self.server.get_exit_code(self.pid) if self.server else None
+    async def poll(self) -> int | None:  # `None` if running
+        if self.pid is None or not self.server:
+            return 0
+        code = await self.server.get_exit_code(self.pid)
+        if code is not None:
             self.pid = None
-            return code if code is not None else 1
-        return None
+        return code
 
     async def wait(self) -> int | None:
         if self.pid is None or not self.server:
