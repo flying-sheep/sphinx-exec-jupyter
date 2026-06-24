@@ -22,6 +22,8 @@ dependencies = [
   "sphinx>=9.1",
 ]
 optional-dependencies.holoviews = [ "holoviews", "sphinx-design" ]
+urls.Documentation = "https://sphinx-exec-jupyter.readthedocs.io/"
+urls.Source = "https://github.com/flying-sheep/sphinx-exec-jupyter"
 entry-points."jupyter_client.kernel_provisioners".forking_provisioner = "sphinx_exec_jupyter._kernel_mgr:ForkingProvisioner"
 entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.holoviews:HoloViewsMimeRenderer"
 
@@ -61,6 +63,7 @@ lint.allowed-confusables = [ "×", "’" ]
 lint.flake8-copyright.notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
+lint.isort.required-imports = [ "from __future__ import annotations" ]
 
 [tool.pytest]
 addopts = [

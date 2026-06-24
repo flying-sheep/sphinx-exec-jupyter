@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Configuration for Sphinx documentation."""
 
+from __future__ import annotations
+
 from importlib.metadata import metadata
 
 _meta = metadata("sphinx-exec-jupyter")
