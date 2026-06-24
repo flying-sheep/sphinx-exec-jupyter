@@ -2,7 +2,7 @@
 
 import builtins
 
-setattr(builtins, "__IPYTHON__", True)
+builtins.__IPYTHON__ = True
 
 del builtins
 
@@ -11,22 +11,23 @@ del builtins
 user_ns = globals().copy()
 
 
-def __main():
+def __main() -> None:  # noqa: C901
     import json
     import os
     import signal
     import sys
     import tempfile
+    from pathlib import Path
     from typing import TYPE_CHECKING, Never
 
     import ipykernel.kernelapp
 
     if TYPE_CHECKING:
-        from . import Cmd
+        from sphinx_exec_jupyter._kernel_mgr import Cmd
 
     exit_codes: dict[int, int] = {}
 
-    def reap_children(signum, frame):
+    def reap_children(signum: int, frame: object) -> None:  # noqa: ARG001
         while True:
             try:
                 pid, status = os.waitpid(-1, os.WNOHANG)
@@ -40,7 +41,7 @@ def __main():
 
     def launch(argv: list[str]) -> Never:
         with (
-            open("/dev/null") as r,
+            Path(os.devnull).open() as r,
             tempfile.NamedTemporaryFile("w", prefix=f"kernel-{os.getpid()}-") as w,
         ):
             os.dup2(r.fileno(), sys.stdin.fileno())
@@ -57,13 +58,12 @@ def __main():
                 sys.stdout.write("\n")
                 sys.stdout.flush()
                 continue
-            else:
-                launch(list(msg["argv"]))
+            launch(list(msg["argv"]))
 
         if msg["cmd"] == "exit_code":
-            code = exit_codes.get(msg["pid"], None)
+            code = exit_codes.get(msg["pid"])
         elif msg["cmd"] == "wait":
-            while (code := exit_codes.get(msg["pid"], None)) is None:
+            while (code := exit_codes.get(msg["pid"])) is None:
                 signal.pause()  # wait until `SIGCHLD` triggers the handler above
         json.dump({"code": code}, sys.stdout)
         sys.stdout.write("\n")

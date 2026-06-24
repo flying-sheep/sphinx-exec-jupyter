@@ -39,9 +39,24 @@ envs.hatch-test.matrix = [
 ]
 
 [tool.ruff]
-lint.extend-select = [ "CPY", "D", "I", "TC", "UP" ]
-lint.ignore = [ "D203", "D213" ]
-lint.per-file-ignores."tests/**/*" = [ "D" ]
+lint.select = [ "ALL" ]
+lint.ignore = [
+  "C408",   # `dict()` is fine
+  "COM812", # conflict with formatter
+  "D203",
+  "D213",
+  "N999",   # Intentional dash in scripts not used for import
+  "S101",   # `assert` is fine
+  "TID252", # relative imports preferred
+]
+lint.per-file-ignores."**/*-*" = [
+  "PLC0415", # imports are not at the top for a reason
+  "T201",    # `print()` used for communication
+]
+lint.per-file-ignores."docs/**/*" = [ "INP001" ]
+lint.per-file-ignores."src/**/*" = [ "PT018" ]
+lint.per-file-ignores."tests/**/*" = [ "D", "INP001" ]
+lint.allowed-confusables = [ "×", "’" ]
 lint.flake8-copyright.notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
