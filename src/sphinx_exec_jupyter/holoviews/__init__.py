@@ -15,10 +15,10 @@ if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
 __all__ = [
-    "setup",
     "HoloViewsDirective",
     "HoloViewsDirectiveOptions",
     "HoloViewsMimeRenderer",
+    "setup",
 ]
 
 

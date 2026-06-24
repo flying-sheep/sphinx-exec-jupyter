@@ -50,8 +50,8 @@ class HoloViewsDirectiveOptions(TypedDict, total=False):
 
 
 class HoloViewsDirective(SphinxDirective):
-    option_spec = dict(
-        backends=lambda arg: choice_list(arg, hv.extension._backends),
+    option_spec = dict(  # noqa: RUF012
+        backends=lambda arg: choice_list(arg, hv.extension._backends),  # noqa: SLF001
     )
     has_content = True
 
@@ -77,10 +77,11 @@ for backend in {json.dumps(sorted(backends))}:
         with patch_myst_nb(prefix, kernel_name=self.config.exec_jupyter_kernel):
             results_raw = execute_cells(cells, self.state.document)
         if (len(results_raw) % n_blocks_per_backend) != 0:
-            raise self.error(
+            msg = (
                 "Unexpected number of outputs from HoloViews execution:\n"
                 f"{'\n\n'.join(n.pformat() for n in results_raw)}"
             )
+            raise self.error(msg)
 
         urls = {"js": JS_URLS, "css": []}
         results: list[nodes.Node] = []
@@ -90,7 +91,8 @@ for backend in {json.dumps(sorted(backends))}:
                 new_urls = json.loads(urls_cell.children[1].children[0].astext())
             except Exception as e:
                 e.add_note(
-                    f"Unexpected output when collecting HoloViews URLs:\n{urls_cell.pformat()}"
+                    f"Unexpected output when collecting HoloViews URLs:\n"
+                    f"{urls_cell.pformat()}"
                 )
                 raise
             urls["js"] += new_urls["js"]
@@ -107,12 +109,11 @@ for backend in {json.dumps(sorted(backends))}:
             return list(results)
 
         if "sphinx_design" not in self.env.app.extensions:
-            raise self.error(
-                "`sphinx_design` extension is required for multiple backends"
-            )
+            msg = "`sphinx_design` extension is required for multiple backends"
+            raise self.error(msg)
 
         tab_set = create_component("tab-set", classes=["sd-tab-set"])
-        for i, (tab_name, plot) in enumerate(zip(backends, results)):
+        for i, (tab_name, plot) in enumerate(zip(backends, results, strict=True)):
             textnodes, _ = self.state.inline_text(tab_name, self.lineno)
             tab_label = nodes.rubric(tab_name, "", *textnodes, classes=["sd-tab-label"])
             tab_content = create_component(

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from importlib.metadata import version
 from typing import TYPE_CHECKING
 
@@ -14,7 +15,7 @@ from ._directive import ExecJupyterDirective
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-__all__ = ["setup", "ExecJupyterDirective"]
+__all__ = ["ExecJupyterDirective", "setup"]
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
@@ -24,10 +25,8 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_config_value("exec_jupyter_kernel", "python3", "env")
     app.add_directive("exec-jupyter", ExecJupyterDirective)
 
-    try:
+    with contextlib.suppress(ExtensionError):
         app.setup_extension("sphinx_exec_jupyter.holoviews")
-    except ExtensionError:
-        pass
 
     return ExtensionMetadata(
         version=version("sphinx-exec-jupyter"),

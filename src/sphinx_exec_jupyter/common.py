@@ -7,7 +7,7 @@ import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import myst_nb.sphinx_
 from nbformat import v4
@@ -64,6 +64,7 @@ def temp_source_code(
     path.parent.mkdir(parents=True, exist_ok=True)  # when docname contains slashes
     path.write_text(source_code)
 
+    @override
     def doc2path(docname: str, base: bool = True) -> Path:
         if docname == docname_tmp:
             return path

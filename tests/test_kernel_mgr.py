@@ -42,7 +42,7 @@ def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) ->
     assert result["data"]["text/plain"] == resp_str
 
 
-def test_shutdown(subtests: pytest.Subtests):
+def test_shutdown(subtests: pytest.Subtests) -> None:
     nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
 
     for attempt in range(2):
@@ -50,30 +50,30 @@ def test_shutdown(subtests: pytest.Subtests):
             jce.executenb(nb)
 
 
-def test_caching(subtests: pytest.Subtests):
+def test_caching() -> None:
     nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
 
-    SLEEP = timedelta(milliseconds=400)
+    sleep = timedelta(milliseconds=400)
 
     times: list[timedelta] = []
     for _attempt in range(3):
         start = datetime.now(tz=UTC)
         with patch_myst_nb(
-            f"import time; time.sleep({SLEEP.total_seconds()})", kernel_name="python3"
+            f"import time; time.sleep({sleep.total_seconds()})", kernel_name="python3"
         ):
             jce.executenb(nb)
         times.append(datetime.now(tz=UTC) - start)
 
     # the first attempt should be longer than subsequent ones
     # since it’s the one that sets up the interpreter and then sleeps
-    assert times[0] >= times[1] + SLEEP
-    assert times[0] >= times[2] + SLEEP
+    assert times[0] >= times[1] + sleep
+    assert times[0] >= times[2] + sleep
 
 
 def test_python_interpreter_flags(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Kernel specs that include Python interpreter flags (e.g. -Xfrozen_modules=off) must work."""
+    """Kernel specs that include Python interpreter flags must work."""
     kernelspec = dict(
         argv=[
             *(sys.executable, "-Xfrozen_modules=off", "-m"),

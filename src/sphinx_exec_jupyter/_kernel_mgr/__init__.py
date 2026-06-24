@@ -9,7 +9,7 @@ import os
 import signal
 from asyncio.subprocess import PIPE, create_subprocess_exec
 from dataclasses import KW_ONLY, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload
+from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload, override
 
 from jupyter_client import LocalPortCache
 from jupyter_client.kernelspec import KernelSpec, KernelSpecManager
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from traitlets import Unicode
 
 
-__all__ = ["ForkingKernelManager", "start_new_fork_kernel", "patch_myst_nb", "Cmd"]
+__all__ = ["Cmd", "ForkingKernelManager", "patch_myst_nb", "start_new_fork_kernel"]
 
 
 class ForkCmd(TypedDict):
@@ -63,7 +63,7 @@ type Cmd = ForkCmd | WaitExitCmd | ExitCodeCmd
 type Resp = ForkResp | WaitExitResp | ExitCodeResp
 
 
-RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork_server.py")
+RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork-server.py")
 
 
 @dataclass
@@ -112,9 +112,8 @@ class KernelForkServer:
                 else self.process.returncode
             )
             stderr = await self.process.stderr.read()
-            raise RuntimeError(
-                f"Server died ({code=}): {stderr.decode('utf-8').strip()}"
-            )
+            msg = f"Server died ({code=}): {stderr.decode('utf-8').strip()}"
+            raise RuntimeError(msg)
         return json.loads(await self.process.stdout.readline())
 
 
@@ -139,9 +138,11 @@ class ForkingProvisioner(KernelProvisionerBase):
         return self.parent.code
 
     @property
+    @override
     def has_process(self) -> bool:
         return self.pid is not None
 
+    @override
     async def poll(self) -> int | None:  # `None` if running
         if self.pid is None or not self.server:
             return 0
@@ -150,6 +151,7 @@ class ForkingProvisioner(KernelProvisionerBase):
             self.pid = None
         return code
 
+    @override
     async def wait(self) -> int | None:
         if self.pid is None or not self.server:
             return 0
@@ -157,18 +159,22 @@ class ForkingProvisioner(KernelProvisionerBase):
         self.pid = None
         return code
 
+    @override
     async def send_signal(self, signum: int) -> None:
         assert self.pid
         os.kill(self.pid, signum)
 
+    @override
     async def kill(self, restart: bool = False) -> None:
         assert self.pid
         os.kill(self.pid, signal.SIGKILL)
 
+    @override
     async def terminate(self, restart: bool = False) -> None:
         assert self.pid
         os.kill(self.pid, signal.SIGTERM)
 
+    @override
     async def launch_kernel(
         self, cmd: list[str], **kwargs: object
     ) -> KernelConnectionInfo:
@@ -181,15 +187,18 @@ class ForkingProvisioner(KernelProvisionerBase):
         self.pid = await self.server.fork(kernel_argv)
         return self.connection_info
 
+    @override
     async def cleanup(self, restart: bool = False) -> None:
         await LocalProvisioner.cleanup(cast("LocalProvisioner", self), restart=restart)
 
+    @override
     async def pre_launch(
         self, *, extra_arguments: Sequence[str] = (), **kwargs: object
     ) -> dict[str, object]:
-        """Prepare for the kernel launch in a way that’s basically copied from LocalKernelProvisioner.
+        """Prepare for the kernel launch.
 
-        But we can’t just use that like `cleanup` above because it calls `super()`.
+        Done in a way that’s basically copied from LocalKernelProvisioner,
+        but we can’t just use that like `cleanup` above because it calls `super()`.
         """
         assert self.kernel_spec
         km = self.parent
@@ -214,7 +223,7 @@ class ForkingProvisioner(KernelProvisionerBase):
 class ForkingKernelSpec(KernelSpec):
     """A KernelSpec that defaults to a forking provisioner."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
         self.metadata.setdefault(
             "kernel_provisioner", dict(provisioner_name="forking_provisioner")
@@ -238,12 +247,12 @@ class ForkingKernelManager(AsyncKernelManager):
     kernel_spec_manager = Instance(ForkingKernelSpecManager)
 
     @default("kernel_spec_manager")
-    def _default_kernel_spec_manager(self):
+    def _default_kernel_spec_manager(self) -> ForkingKernelSpecManager:
         return ForkingKernelSpecManager(parent=self)
 
     code: str
     provisioner: ForkingProvisioner
 
-    def __init__(self, code: str, **kw):
+    def __init__(self, code: str, **kw: object) -> None:
         super().__init__(**kw)
         self.code = code
