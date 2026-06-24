@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Common code for sphinx-exec-jupyter."""
+
 from __future__ import annotations
 
 import shutil
@@ -18,6 +20,8 @@ if TYPE_CHECKING:
 
 
 class ExtData(TypedDict, total=False):
+    """Document metadata added by us."""
+
     count: int
 
 

@@ -3,6 +3,7 @@
 from docutils import nodes
 from sphinx.util.docutils import SphinxDirective
 
+from ._kernel_mgr import patch_myst_nb
 from .common import execute_cells
 
 __all__ = ["ExecJupyterDirective"]
@@ -13,4 +14,7 @@ class ExecJupyterDirective(SphinxDirective):
 
     def run(self) -> list[nodes.Node]:
         code = "\n".join(self.content)
-        return execute_cells([code], self.state.document)
+        with patch_myst_nb(
+            self.config.exec_jupyter_code, kernel_name=self.config.exec_jupyter_kernel
+        ):
+            return execute_cells([code], self.state.document)

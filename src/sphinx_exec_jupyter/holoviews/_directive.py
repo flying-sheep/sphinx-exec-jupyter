@@ -15,6 +15,8 @@ from panel.io.resources import CDN_DIST
 from sphinx.util.docutils import SphinxDirective
 from sphinx_design.shared import create_component
 
+from sphinx_exec_jupyter._kernel_mgr import patch_myst_nb
+
 from ..common import execute_cells
 from ._mime_render import HoloViewsMimeRenderer
 
@@ -58,19 +60,22 @@ class HoloViewsDirective(SphinxDirective):
     def run(self) -> list[nodes.Node]:
         backends = self.options.get("backends", self.env.config.holoviews_backends)
 
+        prefix = f"""\
+import holoviews as hv
+for backend in {json.dumps(sorted(backends))}:
+    hv.extension(backend)
+{self.config.exec_jupyter_code}
+"""
         code = "\n".join(self.content)
         cells = [
             block
             for backend in backends
-            for block in [
-                f"import holoviews as hv\nhv.extension({backend!r})",
-                code,
-                COLLECT_URLS,
-            ]
+            for block in [f"hv.extension({backend!r})", code, COLLECT_URLS]
         ]
         n_blocks_per_backend = 3
         assert len(cells) == n_blocks_per_backend * len(backends)
-        results_raw = execute_cells(cells, self.state.document)
+        with patch_myst_nb(prefix, kernel_name=self.config.exec_jupyter_kernel):
+            results_raw = execute_cells(cells, self.state.document)
         if (len(results_raw) % n_blocks_per_backend) != 0:
             raise self.error(
                 "Unexpected number of outputs from HoloViews execution:\n"
