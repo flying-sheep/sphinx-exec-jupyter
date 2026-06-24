@@ -70,7 +70,7 @@ RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork_server.py")
 class KernelForkServer:
     """A server that executes code and allows forking off kernels after."""
 
-    interpreter: str
+    py_cmd: tuple[str, ...]
     code: str
     process: Process | None = field(init=False, default=None)
 
@@ -78,10 +78,8 @@ class KernelForkServer:
         if self.process is None:
             code = RUN_SERVER_CODE.replace('"USER_CODE_INSERTION_POINT"', self.code)
             self.process = await create_subprocess_exec(
-                self.interpreter, "-c", code, stdin=PIPE, stdout=PIPE, stderr=PIPE
+                *self.py_cmd, "-c", code, stdin=PIPE, stdout=PIPE, stderr=PIPE
             )
-        else:
-            assert self.interpreter == cmd[0]
 
         resp = await self._send_cmd(ForkCmd(cmd="fork", argv=cmd))
         return resp["pid"]
@@ -134,7 +132,7 @@ class ForkingProvisioner(KernelProvisionerBase):
     server: KernelForkServer | None = field(init=False, default=None)
     pid: int | None = field(init=False, default=None)
 
-    SERVERS: ClassVar[dict[tuple[str, str], KernelForkServer]] = {}
+    SERVERS: ClassVar[dict[tuple[tuple[str, ...], str], KernelForkServer]] = {}
 
     @property
     def code(self) -> str:
@@ -175,10 +173,12 @@ class ForkingProvisioner(KernelProvisionerBase):
         self, cmd: list[str], **kwargs: object
     ) -> KernelConnectionInfo:
         cls = type(self)
+        m_idx = cmd.index("-m")
+        py_cmd, kernel_argv = tuple(cmd[:m_idx]), cmd[m_idx + 2 :]
         self.server = cls.SERVERS.setdefault(
-            (cmd[0], self.code), KernelForkServer(cmd[0], self.code)
+            (py_cmd, self.code), KernelForkServer(py_cmd, self.code)
         )
-        self.pid = await self.server.fork(cmd)
+        self.pid = await self.server.fork(kernel_argv)
         return self.connection_info
 
     async def cleanup(self, restart: bool = False) -> None:

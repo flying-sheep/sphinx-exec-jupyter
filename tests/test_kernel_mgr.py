@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import sys
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, cast
 
@@ -12,6 +14,8 @@ import pytest
 from sphinx_exec_jupyter._kernel_mgr import ForkingProvisioner, patch_myst_nb
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from nbformat_types.versions import current as nbt
     from pytest_mock import MockerFixture
 
@@ -64,3 +68,25 @@ def test_caching(subtests: pytest.Subtests):
     # since it’s the one that sets up the interpreter and then sleeps
     assert times[0] >= times[1] + SLEEP
     assert times[0] >= times[2] + SLEEP
+
+
+def test_python_interpreter_flags(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Kernel specs that include Python interpreter flags (e.g. -Xfrozen_modules=off) must work."""
+    kernelspec = dict(
+        argv=[
+            *(sys.executable, "-Xfrozen_modules=off", "-m"),
+            *("ipykernel_launcher", "-f", "{connection_file}"),
+        ],
+        display_name="Python 3 (frozen modules off)",
+        language="python",
+    )
+    kernel_dir = tmp_path / "kernels" / "python3-frozen"
+    kernel_dir.mkdir(parents=True)
+    (kernel_dir / "kernel.json").write_text(json.dumps(kernelspec))
+    monkeypatch.setenv("JUPYTER_PATH", str(tmp_path))
+
+    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("1 + 1")])
+    with patch_myst_nb("", kernel_name="python3-frozen"):
+        jce.executenb(nb)
