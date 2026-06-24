@@ -54,8 +54,6 @@ jobs:
       - name: Install dependencies
         run: uvx hatch -v env create ${{ matrix.env.name }}
       - name: Run tests
-        env:
-          COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
         run: |
           uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto --junitxml=test-results.xml
           uvx hatch run ${{ matrix.env.name }}:cov-combine
@@ -64,17 +62,19 @@ jobs:
       - name: Upload coverage data
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
+          report_type: coverage
           use_oidc: true
           env_vars: ENV_NAME
           fail_ci_if_error: true
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 #v1.2.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
+          report_type: test_results
           use_oidc: true
           env_vars: ENV_NAME
           fail_ci_if_error: true
-          file: test-results.xml
+          files: test-results.xml
   check:
     if: always()
     needs:

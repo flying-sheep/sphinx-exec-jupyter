@@ -70,3 +70,6 @@ addopts = [
 anyio_mode = "auto"
 filterwarnings = [ "error" ]
 strict = true
+
+[tool.coverage]
+run.patch = "subprocess"
