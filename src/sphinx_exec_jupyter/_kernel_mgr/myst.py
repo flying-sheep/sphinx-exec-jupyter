@@ -2,16 +2,32 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
 import jupyter_cache.executors.utils
-import nbclient
-from jupyter_cache.executors.utils import executenb
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+    from sphinx.config import Config
+
+
+__all__ = ["maybe_patch_myst_nb", "patch_myst_nb"]
+
+
+@contextmanager
+def maybe_patch_myst_nb(config: Config) -> Generator[None]:
+    do_patch = config.exec_jupyter_patch_myst_nb and (
+        config.exec_jupyter_code or config.exec_jupyter_kernel != "python3"
+    )
+    with (
+        patch_myst_nb(config.exec_jupyter_code, kernel_name=config.exec_jupyter_kernel)
+        if do_patch
+        else nullcontext()
+    ):
+        yield
 
 
 @contextmanager
@@ -22,8 +38,9 @@ def patch_myst_nb(code: str, *, kernel_name: str) -> Generator[None]:
         def __init__(self, *args: object, **kwargs: object) -> None:
             super().__init__(code, *args, **kwargs)
 
+    orig_executenb = jupyter_cache.executors.utils.executenb
     jupyter_cache.executors.utils.executenb = partial(
-        executenb,
+        orig_executenb,
         kernel_manager_class=F,
         kernel_name=kernel_name,
         shutdown_kernel="immediate",
@@ -32,4 +49,4 @@ def patch_myst_nb(code: str, *, kernel_name: str) -> Generator[None]:
     try:
         yield
     finally:
-        jupyter_cache.executors.utils.executenb = nbclient.execute
+        jupyter_cache.executors.utils.executenb = orig_executenb
