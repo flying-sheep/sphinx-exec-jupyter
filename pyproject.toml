@@ -1,10 +1,9 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = [ "hatchling" ]
+requires = [ "hatch-vcs", "hatchling" ]
 
 [project]
 name = "sphinx-exec-jupyter"
-version = "0.1.0"
 description = "Execute code and let Jupyter format the output"
 license = "MPL-2.0"
 authors = [ { name = "Philipp A.", email = "flying-sheep@web.de" } ]
@@ -16,6 +15,7 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
+dynamic = [ "version" ]
 dependencies = [
   "myst-nb>=1.4",
   "nbformat>=5.10.4",
@@ -26,6 +26,7 @@ entry-points."jupyter_client.kernel_provisioners".forking_provisioner = "sphinx_
 entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.holoviews:HoloViewsMimeRenderer"
 
 [tool.hatch]
+version.source = "vcs"
 envs.default.installer = "uv"
 envs.default.features = [ "holoviews" ]
 envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
