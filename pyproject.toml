@@ -72,4 +72,4 @@ filterwarnings = [ "error" ]
 strict = true
 
 [tool.coverage]
-run.patch = "subprocess"
+run.patch = [ "subprocess" ]
