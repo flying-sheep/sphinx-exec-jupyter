@@ -69,7 +69,7 @@ type Cmd = ForkCmd | WaitExitCmd | ExitCodeCmd
 type Resp = ForkResp | WaitExitResp | ExitCodeResp
 
 
-RUN_SERVER_CODE = importlib.resources.read_text(__name__, "fork-server.py")
+RUN_SERVER_CODE = (importlib.resources.files(__name__) / "fork-server.py").read_text()
 
 
 @dataclass
