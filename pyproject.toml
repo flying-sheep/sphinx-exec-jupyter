@@ -73,4 +73,4 @@ strict = true
 
 [tool.coverage]
 run.patch = [ "subprocess" ]
-run.source = "."
+run.source = [ "." ]
