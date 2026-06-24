@@ -11,6 +11,27 @@ This extension adds at least one directive (see `sphinx_exec_jupyter.holoviews`_
     Execute a Jupyter notebook cell and embed the output into the documentation.
     The Python expression on the last line of the directive body is displayed.
 
+It can be configured with the following settings:
+
+.. confval:: exec_jupyter_code
+    :type: ``str``
+
+    Prefix code to execute before the code in ``exec-jupyter`` or ``holoviews``.
+    Kernels are started from forked processes after this code is executed,
+    so it can be used for long-running initialization code (e.g. slow imports).
+
+.. confval:: exec_jupyter_kernel
+    :type: ``str``
+
+    Name of the Jupyter kernel to use.
+    If not set, the default kernel is used.
+
+.. confval:: exec_jupyter_patch_myst_nb
+    :type: ``bool``
+
+    If ``True`` (the default), and either ``exec_jupyter_code`` or ``exec_jupyter_kernel`` are set,
+    the ``myst_nb`` extension is patched to use the provided code and/or kernel.
+
 Examples
 --------
 

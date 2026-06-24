@@ -22,6 +22,7 @@ dependencies = [
   "sphinx>=9.1",
 ]
 optional-dependencies.holoviews = [ "holoviews", "sphinx-design" ]
+entry-points."jupyter_client.kernel_provisioners".forking_provisioner = "sphinx_exec_jupyter._kernel_mgr:ForkingProvisioner"
 entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.holoviews:HoloViewsMimeRenderer"
 
 [tool.hatch]
@@ -31,9 +32,44 @@ envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
 envs.default.scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
 envs.default.scripts.docs-clean = "rm -rf docs/_build {args}"
 envs.default.scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
+envs.hatch-test.features = [ "holoviews" ]
+envs.hatch-test.extra-dependencies = [ "anyio", "nbformat-types", "pytest-mock" ]
+envs.hatch-test.matrix = [
+  { python = [ "3.14", "3.12" ] },
+]
 
 [tool.ruff]
-lint.extend-select = [ "CPY", "I", "TC", "UP" ]
+lint.select = [ "ALL" ]
+lint.ignore = [
+  "C408",   # `dict()` is fine
+  "COM812", # conflict with formatter
+  "D203",
+  "D213",
+  "N999",   # Intentional dash in scripts not used for import
+  "S101",   # `assert` is fine
+  "TID252", # relative imports preferred
+]
+lint.per-file-ignores."**/*-*" = [
+  "PLC0415", # imports are not at the top for a reason
+  "T201",    # `print()` used for communication
+]
+lint.per-file-ignores."docs/**/*" = [ "INP001" ]
+lint.per-file-ignores."src/**/*" = [ "PT018" ]
+lint.per-file-ignores."tests/**/*" = [ "D", "INP001" ]
+lint.allowed-confusables = [ "×", "’" ]
 lint.flake8-copyright.notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
+
+[tool.pytest]
+addopts = [
+  "--import-mode=importlib",
+  "--doctest-modules",
+  "--pyargs",
+]
+anyio_mode = "auto"
+filterwarnings = [ "error" ]
+strict = true
+
+[tool.coverage]
+run.patch = [ "subprocess" ]

@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  FORCE_COLOR: "1"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  get-environments:
+    runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.get-envs.outputs.envs }}
+    steps:
+      - &CLONE
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          filter: blob:none
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 #v8.2.0
+        with:
+          enable-cache: false
+      - id: get-envs
+        run: |
+          ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
+            | map(
+              select(.key | startswith("hatch-test"))
+              | { name: .key, python: .value.python }
+            )')
+          echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
+  test:
+    needs: get-environments
+    permissions:
+      id-token: write  # for codecov OIDC
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
+    env:  # environment variable for use in codecov’s env_vars tagging
+      ENV_NAME: ${{ matrix.env.name }}
+    steps:
+      - *CLONE
+      - name: Install UV
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 #v8.2.0
+      - name: Install dependencies
+        run: uvx hatch -v env create ${{ matrix.env.name }}
+      - name: Run tests
+        run: |
+          uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto --junitxml=test-results.xml
+          uvx hatch run ${{ matrix.env.name }}:cov-combine
+          uvx hatch run ${{ matrix.env.name }}:coverage xml
+          uvx hatch run ${{ matrix.env.name }}:cov-report
+      - name: Upload coverage data
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
+        with:
+          report_type: coverage
+          use_oidc: true
+          env_vars: ENV_NAME
+          fail_ci_if_error: true
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
+        with:
+          report_type: test_results
+          use_oidc: true
+          env_vars: ENV_NAME
+          fail_ci_if_error: true
+          files: test-results.xml
+  check:
+    if: always()
+    needs:
+      - get-environments
+      - test
+    runs-on: ubuntu-latest
+    steps:
+        - uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe #v1.2.2
+          with:
+            jobs: ${{ toJSON(needs) }}

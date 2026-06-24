@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from myst_nb.core.render import MimeRenderPlugin
 
@@ -15,9 +15,10 @@ HV_MIME_TYPES = frozenset(
 
 
 class HoloViewsMimeRenderer(MimeRenderPlugin):
-    mime_priority_overrides = [("*", mt, 1) for mt in HV_MIME_TYPES]
+    mime_priority_overrides = tuple(("*", mt, 1) for mt in HV_MIME_TYPES)
 
     @staticmethod
+    @override
     def handle_mime(
         renderer: NbElementRenderer, data: MimeData, inline: int
     ) -> None | list[nodes.Element]:

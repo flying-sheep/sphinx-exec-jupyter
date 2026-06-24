@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Common code for sphinx-exec-jupyter."""
+
 from __future__ import annotations
 
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import myst_nb.sphinx_
 from nbformat import v4
@@ -18,6 +20,8 @@ if TYPE_CHECKING:
 
 
 class ExtData(TypedDict, total=False):
+    """Document metadata added by us."""
+
     count: int
 
 
@@ -60,6 +64,7 @@ def temp_source_code(
     path.parent.mkdir(parents=True, exist_ok=True)  # when docname contains slashes
     path.write_text(source_code)
 
+    @override
     def doc2path(docname: str, base: bool = True) -> Path:
         if docname == docname_tmp:
             return path

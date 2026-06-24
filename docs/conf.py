@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Configuration for Sphinx documentation."""
+
 from importlib.metadata import metadata
 
 _meta = metadata("sphinx-exec-jupyter")
@@ -17,4 +19,3 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 master_doc = "index"
 
 html_theme = "furo"
-# html_static_path = ["_static"]
