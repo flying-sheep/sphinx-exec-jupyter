@@ -54,7 +54,11 @@ jobs:
       - name: Install dependencies
         run: uvx hatch -v env create ${{ matrix.env.name }}
       - name: Run tests
-        run: uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto --cov --cov-report=xml --junitxml=test-results.xml
+        run: |
+          uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto --junitxml=test-results.xml
+          uvx hatch run ${{ matrix.env.name }}:cov-combine
+          uvx hatch run ${{ matrix.env.name }}:coverage xml
+          uvx hatch run ${{ matrix.env.name }}:cov-report
       - name: Upload coverage data
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f #v7.0.0
         with:
