@@ -1,6 +1,15 @@
 # sphinx-exec-jupyter
 
-[![Documentation Status](https://readthedocs.org/projects/sphinx-exec-jupyter/badge/?version=latest)](https://sphinx-exec-jupyter.readthedocs.io/en/latest/)
+[![Documentation Status][doc badge]][docs]
+[![Test Status][test badge]][tests]
+[![Coverage Status][codecov badge]][codecov]
+
+[doc badge]: https://readthedocs.org/projects/sphinx-exec-jupyter/badge/
+[docs]: https://sphinx-exec-jupyter.readthedocs.io/
+[test badge]: https://github.com/flying-sheep/sphinx-exec-jupyter/actions/workflows/ci.yml/badge.svg
+[tests]: https://github.com/flying-sheep/sphinx-exec-jupyter/actions/workflows/ci.yml
+[codecov badge]: https://codecov.io/gh/flying-sheep/sphinx-exec-jupyter/branch/main/graph/badge.svg
+[codecov]: https://codecov.io/gh/flying-sheep/sphinx-exec-jupyter
 
 This Sphinx extension allows you to execute Jupyter notebooks and include their output in your documentation.
 
