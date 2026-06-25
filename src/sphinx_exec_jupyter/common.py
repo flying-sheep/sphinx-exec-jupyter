@@ -10,7 +10,7 @@ from tempfile import mkdtemp
 from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import myst_nb.sphinx_
-from nbformat import v4
+from nbformat import NotebookNode, v4
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -28,7 +28,10 @@ class ExtData(TypedDict, total=False):
 def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = v4.writes(
-        v4.new_notebook(cells=[v4.new_code_cell(cell) for cell in cells])
+        v4.new_notebook(
+            metadata=NotebookNode(language_info=NotebookNode(name="python")),
+            cells=[v4.new_code_cell(cell) for cell in cells],
+        )
     )
 
     # execute notebook and append resulting nodes to document
