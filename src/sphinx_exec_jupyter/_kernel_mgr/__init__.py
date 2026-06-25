@@ -110,17 +110,22 @@ class KernelForkServer:
         assert self.process and self.process.stdin and self.process.stdout
         self.process.stdin.write(json.dumps(cmd).encode("utf-8") + b"\n")
         await self.process.stdin.drain()
-        if self.process.returncode is not None:
+        out = (
+            (await self.process.stdout.readline())
+            if self.process.returncode is None
+            else b""
+        )
+        try:
+            return json.loads(out)
+        except json.JSONDecodeError as e:
             assert self.process.stderr
-            code = (
-                signal.strsignal(-self.process.returncode)
-                if self.process.returncode < 0
-                else self.process.returncode
+            err = await self.process.stderr.read()
+            msg = (
+                "Failed to parse response from fork server:\n"
+                f"Stdout: {out.decode('utf-8', errors='replace')}\n"
+                f"Stderr: {err.decode('utf-8', errors='replace')}"
             )
-            stderr = await self.process.stderr.read()
-            msg = f"Server died ({code=}): {stderr.decode('utf-8').strip()}"
-            raise RuntimeError(msg)
-        return json.loads(await self.process.stdout.readline())
+            raise RuntimeError(msg) from e
 
 
 @dataclass
