@@ -10,7 +10,11 @@ import jupyter_cache.executors.utils as jce
 import nbformat
 import pytest
 
-from sphinx_exec_jupyter._kernel_mgr import ForkingProvisioner, patch_myst_nb
+from sphinx_exec_jupyter._kernel_mgr import (
+    FORK_ENV_VAR,
+    ForkingProvisioner,
+    patch_myst_nb,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -39,6 +43,25 @@ def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) ->
     [result] = code_cell["outputs"]
     assert result["output_type"] == "execute_result"
     assert result["data"]["text/plain"] == resp_str
+
+
+def test_no_fork_fallback(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without forking, kernels are exec-launched but still run the preload code."""
+    monkeypatch.setenv(FORK_ENV_VAR, "0")
+    prov = mocker.spy(ForkingProvisioner, "__init__")
+    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("foo")])
+
+    with patch_myst_nb("foo = 1", kernel_name="python3"):
+        node = cast("nbt.Document", jce.executenb(nb))
+
+    assert prov.call_count == 0, "should not use the forking provisioner"
+    [code_cell] = node["cells"]
+    assert code_cell["cell_type"] == "code"
+    [result] = code_cell["outputs"]
+    assert result["output_type"] == "execute_result"
+    assert result["data"]["text/plain"] == "1"
 
 
 def test_shutdown(subtests: pytest.Subtests) -> None:
