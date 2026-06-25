@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
+"""Mime renderer ignoring HoloViews metadata."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
@@ -9,12 +11,15 @@ if TYPE_CHECKING:
     from docutils import nodes
     from myst_nb.core.render import MimeData, NbElementRenderer
 
+
 HV_MIME_TYPES = frozenset(
     {"application/vnd.holoviews_load.v0+json", "application/vnd.holoviews_exec.v0+json"}
 )
 
 
 class HoloViewsMimeRenderer(MimeRenderPlugin):
+    """Accepts but ignores HoloViews metadata."""
+
     mime_priority_overrides = tuple(("*", mt, 1) for mt in HV_MIME_TYPES)
 
     @staticmethod

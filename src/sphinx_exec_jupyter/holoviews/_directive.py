@@ -18,14 +18,13 @@ from sphinx_design.shared import create_component
 from sphinx_exec_jupyter._kernel_mgr import patch_myst_nb
 
 from ..common import execute_cells
-from ._mime_render import HoloViewsMimeRenderer
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from myst_nb.sphinx_ import SphinxEnvType
 
-__all__ = ["HoloViewsDirective", "HoloViewsMimeRenderer"]
+__all__ = ["HoloViewsDirective"]
 
 FILES = files(__name__)
 COLLECT_URLS = (FILES / "collect-urls.py").read_text()

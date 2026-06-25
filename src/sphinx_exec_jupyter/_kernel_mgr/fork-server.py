@@ -18,7 +18,6 @@ def __main() -> None:  # noqa: C901
     import os
     import signal
     import sys
-    import tempfile
     from pathlib import Path
     from typing import TYPE_CHECKING
 
@@ -43,11 +42,8 @@ def __main() -> None:  # noqa: C901
 
     signal.signal(signal.SIGCHLD, reap_children)
 
-    def launch(argv: list[str]) -> Never:
-        with (
-            Path(os.devnull).open() as r,
-            tempfile.NamedTemporaryFile("w", prefix=f"kernel-{os.getpid()}-") as w,
-        ):
+    def launch(argv: list[str], log_path: str) -> Never:
+        with Path(os.devnull).open() as r, Path(log_path).open("w") as w:
             os.dup2(r.fileno(), sys.stdin.fileno())
             os.dup2(w.fileno(), sys.stdout.fileno())
             os.dup2(w.fileno(), sys.stderr.fileno())
@@ -62,7 +58,7 @@ def __main() -> None:  # noqa: C901
                 sys.stdout.write("\n")
                 sys.stdout.flush()
                 continue
-            launch(list(msg["argv"]))
+            launch(list(msg["argv"]), msg["log"])
 
         if msg["cmd"] == "exit_code":
             code = exit_codes.get(msg["pid"])
