@@ -51,3 +51,19 @@ def _maybe_patch_myst_nb(app: Sphinx, config: Config) -> None:
             ctx.__exit__(type(exc), exc, exc.__traceback__)
 
     app.connect("build-finished", cleanup)
+
+
+def __getattr__(name: str) -> object:
+    if name == "HoloViewsMimeRenderer":
+        # Create dummy so `myst_nb.mime_renderers` entry point still resolves
+        try:
+            from .holoviews import HoloViewsMimeRenderer  # noqa: PLC0415
+        except ImportError:
+            from myst_nb.core.render import MimeRenderPlugin  # noqa: PLC0415
+
+            class HoloViewsMimeRenderer(MimeRenderPlugin):
+                pass
+
+        return HoloViewsMimeRenderer
+
+    raise AttributeError

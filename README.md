@@ -18,8 +18,7 @@ This Sphinx extension allows you to execute Jupyter notebooks and include their 
 
 ## Installation
 
-Install or depend on
-`sphinx-exec-jupyter @ git+https://github.com/flying-sheep/sphinx-exec-jupyter.git`,
+Install or depend on `sphinx-exec-jupyter`,
 optionally with the `holoviews` extra (see below).
 Then enable this extension in your `conf.py`:
 
@@ -44,8 +43,7 @@ Executes a Jupyter notebook cell and includes its output:
 
 ### `holoviews`
 
-Enable by installing the `holoviews` extra by depending on
-`sphinx-exec-jupyter[holoviews] @ git+https://github.com/flying-sheep/sphinx-exec-jupyter.git`
+Enable by installing the `holoviews` extra by depending on `sphinx-exec-jupyter[holoviews]`
 
 Embeds a HoloViews plot:
 
