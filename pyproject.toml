@@ -40,9 +40,7 @@ envs.hatch-test.extra-dependencies = [ "anyio", "nbformat-types", "pytest-mock" 
 envs.hatch-test.matrix = [
   { python = [ "3.14", "3.12" ], feature-set = [ "full", "min" ] },
 ]
-
-[tool.hatch.envs.hatch-test.overrides.matrix.feature-set]
-features = [{ value = "holoviews", if = ["full"] }]
+envs.hatch-test.overrides.matrix.feature-set.features = [ { value = "holoviews", if = [ "full" ] } ]
 
 [tool.ruff]
 lint.select = [ "ALL" ]
