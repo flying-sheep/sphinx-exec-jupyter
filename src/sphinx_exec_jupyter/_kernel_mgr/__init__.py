@@ -21,7 +21,7 @@ from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import KernelProvisionerBase
 from traitlets import Instance, default
 
-from .myst import maybe_patch_myst_nb, patch_myst_nb
+from .myst import maybe_patch_myst_nb
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
@@ -38,7 +38,6 @@ __all__ = [
     "ForkingKernelManager",
     "forking_supported",
     "maybe_patch_myst_nb",
-    "patch_myst_nb",
     "start_new_fork_kernel",
 ]
 

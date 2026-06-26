@@ -10,11 +10,8 @@ import jupyter_cache.executors.utils as jce
 import nbformat
 import pytest
 
-from sphinx_exec_jupyter._kernel_mgr import (
-    FORK_ENV_VAR,
-    ForkingProvisioner,
-    patch_myst_nb,
-)
+from sphinx_exec_jupyter._kernel_mgr import FORK_ENV_VAR, ForkingProvisioner
+from sphinx_exec_jupyter._kernel_mgr.myst import patch_myst_nb
 
 if TYPE_CHECKING:
     from pathlib import Path

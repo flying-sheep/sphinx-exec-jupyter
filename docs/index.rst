@@ -26,10 +26,19 @@ It can be configured with the following settings:
     Name of the Jupyter kernel to use.
     If not set, the default kernel is used.
 
+.. confval:: exec_jupyter_isolate_per_document
+    :type: ``bool``
+    :default: ``True``
+
+    If ``True``, all directives in the same document share a single kernel,
+    so variables defined in one directive are accessible in later ones.
+    When ``False``, each directive runs in its own isolated kernel.
+
 .. confval:: exec_jupyter_patch_myst_nb
     :type: ``bool``
+    :default: ``True``
 
-    If ``True`` (the default), and either ``exec_jupyter_code`` or ``exec_jupyter_kernel`` are set,
+    If ``True`` and either ``exec_jupyter_code`` or ``exec_jupyter_kernel`` are set,
     the ``myst_nb`` extension is patched to use the provided code and/or kernel.
 
 Examples
