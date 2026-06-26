@@ -75,7 +75,7 @@ addopts = [
 ]
 anyio_mode = "auto"
 filterwarnings = [ "error" ]
-norecursedirs = [ "src/holoviews" ]  # doctests can’t import it
+norecursedirs = [ "src/sphinx_exec_jupyter/holoviews" ]  # doctests can’t import it
 strict = true
 
 [tool.coverage]
