@@ -14,16 +14,23 @@ if TYPE_CHECKING:
     from sphinx.config import Config
 
 
-__all__ = ["maybe_patch_myst_nb", "patch_myst_nb"]
+__all__ = ["maybe_patch_myst_nb"]
 
 
 @contextmanager
-def maybe_patch_myst_nb(config: Config) -> Generator[None]:
-    do_patch = config.exec_jupyter_patch_myst_nb and (
-        config.exec_jupyter_code or config.exec_jupyter_kernel != "python3"
+def maybe_patch_myst_nb(
+    config: Config, *, code: str | None = None, is_local: bool = True
+) -> Generator[None]:
+    """Patch myst-nb if needed.
+
+    if `is_local` is False, respect `config.exec_jupyter_patch_myst_nb`.
+    """
+    code = code or config.exec_jupyter_code
+    do_patch = (is_local or config.exec_jupyter_patch_myst_nb) and (
+        code or config.exec_jupyter_kernel != "python3"
     )
     with (
-        patch_myst_nb(config.exec_jupyter_code, kernel_name=config.exec_jupyter_kernel)
+        patch_myst_nb(code, kernel_name=config.exec_jupyter_kernel)
         if do_patch
         else nullcontext()
     ):
@@ -40,10 +47,7 @@ def patch_myst_nb(code: str, *, kernel_name: str) -> Generator[None]:
 
     orig_executenb = jupyter_cache.executors.utils.executenb
     jupyter_cache.executors.utils.executenb = partial(
-        orig_executenb,
-        kernel_manager_class=F,
-        kernel_name=kernel_name,
-        shutdown_kernel="immediate",
+        orig_executenb, kernel_manager_class=F, kernel_name=kernel_name
     )
 
     try:

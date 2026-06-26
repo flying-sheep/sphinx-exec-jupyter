@@ -37,7 +37,7 @@ def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node
     # execute notebook and append resulting nodes to document
     parser = myst_nb.sphinx_.Parser()
     after_last_child = len(document.children)
-    with temp_source_code(document.settings.env, notebook_json):
+    with temp_source_code(document, notebook_json):
         parser.parse(notebook_json, document)
 
     # extract nodes and restore document
@@ -52,9 +52,10 @@ def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node
 
 @contextmanager
 def temp_source_code(
-    env: SphinxEnvType, source_code: str
+    document: nodes.document, source_code: str
 ) -> Generator[Path, None, None]:
     """Context manager to temporarily set the current document."""
+    env = cast("SphinxEnvType", document.settings.env)
     ext_data = cast(
         "ExtData", env.current_document.setdefault("sphinx_exec_jupyter", {})
     )
@@ -75,9 +76,11 @@ def temp_source_code(
 
     env.current_document.docname = docname_tmp
     env.doc2path, doc2path_orig = doc2path, env.doc2path
+    old_source, document.current_source = document.current_source, str(path)
     try:
         yield path
     finally:
         env.current_document.docname = old_docname
         env.doc2path = doc2path_orig
+        document.current_source = old_source
         shutil.rmtree(d)

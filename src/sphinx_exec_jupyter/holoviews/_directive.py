@@ -12,10 +12,12 @@ from docutils.parsers.rst import directives
 from myst_nb.sphinx_ import NbMetadataCollector
 from panel.io.convert import BOKEH_VERSION
 from panel.io.resources import CDN_DIST
+from sphinx.errors import ExtensionError
 from sphinx.util.docutils import SphinxDirective
 from sphinx_design.shared import create_component
 
-from sphinx_exec_jupyter._kernel_mgr import patch_myst_nb
+from sphinx_exec_jupyter._kernel_mgr import maybe_patch_myst_nb
+from sphinx_exec_jupyter._pending import PendingExecNode
 
 from ..common import execute_cells
 
@@ -38,6 +40,68 @@ JS_URLS = [
 ]
 
 
+def hv_preload(backends: Iterable[str], exec_code: str) -> str:
+    return (
+        "import holoviews as hv\n"
+        f"for backend in {json.dumps(sorted(backends))}:\n"
+        f"    hv.extension(backend)\n"
+        f"{exec_code}"
+    )
+
+
+def process_hv_results(
+    results_raw: list[nodes.Node], backends: list[str], env: SphinxEnvType
+) -> list[nodes.Node]:
+    n_blocks = 3
+    if len(results_raw) != n_blocks * len(backends):
+        msg = "Unexpected number of outputs from HoloViews execution:\n" + "\n\n".join(
+            n.pformat() for n in results_raw
+        )
+        raise ExtensionError(msg)
+
+    urls: dict[str, list[str]] = {"js": list(JS_URLS), "css": []}
+    results: list[nodes.Node] = []
+    for _header, plot, urls_cell in batched(results_raw, n_blocks):
+        try:
+            new_urls = json.loads(urls_cell.children[1].children[0].astext())
+        except Exception as e:
+            e.add_note(
+                "Unexpected output when collecting HoloViews URLs:\n"
+                + urls_cell.pformat()
+            )
+            raise
+        urls["js"] += new_urls["js"]
+        urls["css"] += new_urls["css"]
+        results.append(plot)
+
+    for url in urls["js"]:
+        NbMetadataCollector.add_js_file(env, env.docname, f"holoviews-{url}", url, {})
+
+    if len(results) == 1:
+        return results
+
+    if "sphinx_design" not in env.app.extensions:
+        msg = "`sphinx_design` extension is required for multiple backends"
+        raise ExtensionError(msg)
+
+    tab_set = create_component("tab-set", classes=["sd-tab-set"])
+    for i, (tab_name, plot) in enumerate(zip(backends, results, strict=True)):
+        tab_label = nodes.rubric(
+            tab_name, "", nodes.Text(tab_name), classes=["sd-tab-label"]
+        )
+        tab_content = create_component(
+            "tab-content", classes=["sd-tab-content"], children=[plot]
+        )
+        tab_item = create_component(
+            "tab-item",
+            classes=["sd-tab-item"],
+            children=[tab_label, tab_content],
+            selected=i == 0,
+        )
+        tab_set += tab_item
+    return [tab_set]
+
+
 def choice_list(argument: str, choices: Iterable[str]) -> list[str]:
     return [
         directives.choice(item.strip(), list(choices)) for item in argument.split(",")
@@ -58,71 +122,20 @@ class HoloViewsDirective(SphinxDirective):
 
     def run(self) -> list[nodes.Node]:
         backends = self.options.get("backends", self.env.config.holoviews_backends)
-
-        prefix = f"""\
-import holoviews as hv
-for backend in {json.dumps(sorted(backends))}:
-    hv.extension(backend)
-{self.config.exec_jupyter_code}
-"""
         code = "\n".join(self.content)
         cells = [
             block
             for backend in backends
             for block in [f"hv.extension({backend!r})", code, COLLECT_URLS]
         ]
-        n_blocks_per_backend = 3
-        assert len(cells) == n_blocks_per_backend * len(backends)
-        with patch_myst_nb(prefix, kernel_name=self.config.exec_jupyter_kernel):
+
+        if self.config.exec_jupyter_isolate_per_document:
+            return [PendingExecNode(cells=cells, hv_backends=list(backends))]
+
+        with maybe_patch_myst_nb(
+            self.config, code=hv_preload(backends, self.config.exec_jupyter_code)
+        ):
             results_raw = execute_cells(cells, self.state.document)
-        if (len(results_raw) % n_blocks_per_backend) != 0:
-            msg = (
-                "Unexpected number of outputs from HoloViews execution:\n"
-                f"{'\n\n'.join(n.pformat() for n in results_raw)}"
-            )
-            raise self.error(msg)
-
-        urls = {"js": JS_URLS, "css": []}
-        results: list[nodes.Node] = []
-        for _header, plot, urls_cell in batched(results_raw, n_blocks_per_backend):
-            try:
-                # container → output (second child) → literal (first child) → text
-                new_urls = json.loads(urls_cell.children[1].children[0].astext())
-            except Exception as e:
-                e.add_note(
-                    f"Unexpected output when collecting HoloViews URLs:\n"
-                    f"{urls_cell.pformat()}"
-                )
-                raise
-            urls["js"] += new_urls["js"]
-            urls["css"] += new_urls["css"]
-            results.append(plot)
-
-        for url in urls["js"]:
-            key = f"holoviews-{url}"
-            NbMetadataCollector.add_js_file(
-                cast("SphinxEnvType", self.env), self.env.docname, key, url, {}
-            )
-
-        if len(results) == 1:
-            return list(results)
-
-        if "sphinx_design" not in self.env.app.extensions:
-            msg = "`sphinx_design` extension is required for multiple backends"
-            raise self.error(msg)
-
-        tab_set = create_component("tab-set", classes=["sd-tab-set"])
-        for i, (tab_name, plot) in enumerate(zip(backends, results, strict=True)):
-            textnodes, _ = self.state.inline_text(tab_name, self.lineno)
-            tab_label = nodes.rubric(tab_name, "", *textnodes, classes=["sd-tab-label"])
-            tab_content = create_component(
-                "tab-content", classes=["sd-tab-content"], children=[plot]
-            )
-            tab_item = create_component(
-                "tab-item",
-                classes=["sd-tab-item"],
-                children=[tab_label, tab_content],
-                selected=i == 0,
-            )
-            tab_set += tab_item
-        return [tab_set]
+        return process_hv_results(
+            results_raw, backends, cast("SphinxEnvType", self.env)
+        )

@@ -10,6 +10,7 @@ import signal
 import sys
 import tempfile
 from asyncio.subprocess import PIPE, create_subprocess_exec
+from contextlib import suppress
 from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload, override
@@ -21,7 +22,7 @@ from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import KernelProvisionerBase
 from traitlets import Instance, default
 
-from .myst import maybe_patch_myst_nb, patch_myst_nb
+from .myst import maybe_patch_myst_nb
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
@@ -38,7 +39,6 @@ __all__ = [
     "ForkingKernelManager",
     "forking_supported",
     "maybe_patch_myst_nb",
-    "patch_myst_nb",
     "start_new_fork_kernel",
 ]
 
@@ -171,6 +171,7 @@ class ForkingProvisioner(KernelProvisionerBase):
     pid: int | None = field(init=False, default=None)
     log_path: str | None = field(init=False, default=None)
     _output_surfaced: bool = field(init=False, default=False)
+    _shutdown_initiated: bool = field(init=False, default=False)
 
     SERVERS: ClassVar[dict[tuple[tuple[str, ...], str], KernelForkServer]] = {}
 
@@ -222,7 +223,7 @@ class ForkingProvisioner(KernelProvisionerBase):
             output = ""
         finally:
             Path(log_path).unlink(missing_ok=True)
-        if code != 0 and output:
+        if code != 0 and output and not self._shutdown_initiated:
             self.parent.log.warning(
                 "Kernel %s exited with code %d. Captured output:\n%s",
                 *(self.kernel_id, code, output),
@@ -235,13 +236,14 @@ class ForkingProvisioner(KernelProvisionerBase):
 
     @override
     async def kill(self, restart: bool = False) -> None:
-        assert self.pid
-        os.kill(self.pid, signal.SIGKILL)
+        self._shutdown_initiated = True
+        if self.pid:
+            with suppress(ProcessLookupError):
+                os.kill(self.pid, signal.SIGKILL)
 
     @override
     async def terminate(self, restart: bool = False) -> None:
-        assert self.pid
-        os.kill(self.pid, signal.SIGTERM)
+        await self.kill(restart=restart)
 
     @override
     async def launch_kernel(
@@ -341,3 +343,17 @@ class ForkingKernelManager(AsyncKernelManager):
         if self.code and not forking_supported():
             cmd = [*cmd, f"--IPKernelApp.exec_lines={self.code}"]
         return cmd
+
+    @override
+    async def finish_shutdown(
+        self,
+        waittime: float | None = None,
+        pollinterval: float = 0.1,
+        restart: bool = False,
+    ) -> None:
+        # For speed, we just kill the kernel
+        if self.has_kernel:
+            await self.provisioner.kill(restart=restart)
+            await self.provisioner.wait()
+
+    _async_finish_shutdown = finish_shutdown

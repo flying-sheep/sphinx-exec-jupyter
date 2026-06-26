@@ -36,11 +36,12 @@ envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
 envs.default.scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
 envs.default.scripts.docs-clean = "rm -rf docs/_build {args}"
 envs.default.scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
-envs.hatch-test.features = [ "holoviews" ]
 envs.hatch-test.extra-dependencies = [ "anyio", "nbformat-types", "pytest-mock" ]
 envs.hatch-test.matrix = [
-  { python = [ "3.14", "3.12" ] },
+  { python = [ "3.14", "3.12" ], feature-set = [ "full", "min" ] },
 ]
+envs.hatch-test.overrides.matrix.feature-set.features = [ { value = "holoviews", if = [ "full" ] } ]
+envs.hatch-test.default-args = []
 
 [tool.ruff]
 lint.select = [ "ALL" ]
@@ -74,6 +75,7 @@ addopts = [
 ]
 anyio_mode = "auto"
 filterwarnings = [ "error" ]
+norecursedirs = [ "src/sphinx_exec_jupyter/holoviews" ]  # doctests can’t import it
 strict = true
 
 [tool.coverage]
