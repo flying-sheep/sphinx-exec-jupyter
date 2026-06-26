@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from contextlib import suppress
 from itertools import islice
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, override
+
+from sphinx.transforms import SphinxTransform
 
 from ._kernel_mgr import maybe_patch_myst_nb
 from ._pending import PendingExecNode
@@ -13,31 +15,35 @@ with suppress(ImportError):
     from .holoviews._directive import hv_preload, process_hv_results
 
 if TYPE_CHECKING:
-    from docutils import nodes
     from myst_nb.sphinx_ import SphinxEnvType
-    from sphinx.application import Sphinx
 
 
-def exec_per_document(app: Sphinx, doctree: nodes.document) -> None:
-    pending: list[PendingExecNode] = list(doctree.findall(PendingExecNode))
-    if not pending:
-        return
+class ExecPendingNodes(SphinxTransform):
+    """Replace PendingExecNode placeholders with executed notebook output nodes."""
 
-    if hv_backends := {
-        backend for node in pending for backend in node["hv_backends"] or ()
-    }:
-        code = hv_preload(hv_backends, app.config.exec_jupyter_code)
-    else:
-        code = None
+    default_priority = 500
 
-    all_cells = [c for node in pending for c in node["cells"]]
-    with maybe_patch_myst_nb(app.config, code=code):
-        all_results = execute_cells(all_cells, doctree)
+    @override
+    def apply(self, **_: object) -> None:
+        pending: list[PendingExecNode] = list(self.document.findall(PendingExecNode))
+        if not pending:
+            return
 
-    env = cast("SphinxEnvType", app.env)
-    it = iter(all_results)
-    for node in pending:
-        results = list(islice(it, len(node["cells"])))
-        if node["hv_backends"] is not None:
-            results = process_hv_results(results, node["hv_backends"], env)
-        node.replace_self(results)
+        if hv_backends := {
+            backend for node in pending for backend in node["hv_backends"] or ()
+        }:
+            code = hv_preload(hv_backends, self.config.exec_jupyter_code)
+        else:
+            code = None
+
+        all_cells = [c for node in pending for c in node["cells"]]
+        with maybe_patch_myst_nb(self.config, code=code):
+            all_results = execute_cells(all_cells, self.document)
+
+        env = cast("SphinxEnvType", self.env)
+        it = iter(all_results)
+        for node in pending:
+            results = list(islice(it, len(node["cells"])))
+            if node["hv_backends"] is not None:
+                results = process_hv_results(results, node["hv_backends"], env)
+            node.replace_self(results)
