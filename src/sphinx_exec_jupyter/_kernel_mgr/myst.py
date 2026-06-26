@@ -47,10 +47,7 @@ def patch_myst_nb(code: str, *, kernel_name: str) -> Generator[None]:
 
     orig_executenb = jupyter_cache.executors.utils.executenb
     jupyter_cache.executors.utils.executenb = partial(
-        orig_executenb,
-        kernel_manager_class=F,
-        kernel_name=kernel_name,
-        shutdown_kernel="immediate",
+        orig_executenb, kernel_manager_class=F, kernel_name=kernel_name
     )
 
     try:
