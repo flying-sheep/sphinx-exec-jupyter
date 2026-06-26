@@ -170,6 +170,11 @@ class ForkingProvisioner(KernelProvisionerBase):
     pid: int | None = field(init=False, default=None)
     log_path: str | None = field(init=False, default=None)
     _output_surfaced: bool = field(init=False, default=False)
+    _shutdown_initiated: bool = field(init=False, default=False)
+
+    def initiate_shutdown(self) -> None:
+        """After calling, we don’t treat SIGKILL as unexpected."""
+        self._shutdown_initiated = True
 
     SERVERS: ClassVar[dict[tuple[tuple[str, ...], str], KernelForkServer]] = {}
 
@@ -221,7 +226,7 @@ class ForkingProvisioner(KernelProvisionerBase):
             output = ""
         finally:
             Path(log_path).unlink(missing_ok=True)
-        if code != 0 and output:
+        if code != 0 and output and not self._shutdown_initiated:
             self.parent.log.warning(
                 "Kernel %s exited with code %d. Captured output:\n%s",
                 *(self.kernel_id, code, output),
@@ -340,3 +345,12 @@ class ForkingKernelManager(AsyncKernelManager):
         if self.code and not forking_supported():
             cmd = [*cmd, f"--IPKernelApp.exec_lines={self.code}"]
         return cmd
+
+    @override
+    async def _async_shutdown_kernel(
+        self, now: bool = False, restart: bool = False
+    ) -> None:
+        # For speed, we just kill the kernel
+        if self.has_kernel:
+            self.provisioner.initiate_shutdown()
+        await super()._async_shutdown_kernel(now=True, restart=restart)
