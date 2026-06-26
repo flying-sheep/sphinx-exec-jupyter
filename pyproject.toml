@@ -41,6 +41,7 @@ envs.hatch-test.matrix = [
   { python = [ "3.14", "3.12" ], feature-set = [ "full", "min" ] },
 ]
 envs.hatch-test.overrides.matrix.feature-set.features = [ { value = "holoviews", if = [ "full" ] } ]
+envs.hatch-test.default-args = []
 
 [tool.ruff]
 lint.select = [ "ALL" ]
@@ -74,6 +75,7 @@ addopts = [
 ]
 anyio_mode = "auto"
 filterwarnings = [ "error" ]
+norecursedirs = [ "src/holoviews" ]  # doctests can’t import it
 strict = true
 
 [tool.coverage]

@@ -39,5 +39,5 @@ def exec_per_document(app: Sphinx, doctree: nodes.document) -> None:
     for node in pending:
         results = list(islice(it, len(node["cells"])))
         if node["hv_backends"] is not None:
-            results = process_hv_results(results, node["hv_backends"], env, env.docname)
+            results = process_hv_results(results, node["hv_backends"], env)
         node.replace_self(results)

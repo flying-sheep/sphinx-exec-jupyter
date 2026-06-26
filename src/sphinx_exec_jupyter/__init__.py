@@ -28,8 +28,8 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.setup_extension("myst_nb")
     app.add_config_value("exec_jupyter_code", "", "env")
     app.add_config_value("exec_jupyter_kernel", "python3", "env")
-    app.add_config_value("exec_jupyter_patch_myst_nb", True, "env")  # noqa: FBT003
     app.add_config_value("exec_jupyter_isolate_per_document", True, "env")  # noqa: FBT003
+    app.add_config_value("exec_jupyter_patch_myst_nb", True, "env")  # noqa: FBT003
     app.add_directive("exec-jupyter", ExecJupyterDirective)
     app.add_node(PendingExecNode)
     app.connect("config-inited", _maybe_patch_myst_nb)

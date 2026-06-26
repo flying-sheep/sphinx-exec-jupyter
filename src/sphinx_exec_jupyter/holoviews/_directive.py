@@ -50,10 +50,7 @@ def hv_preload(backends: Iterable[str], exec_code: str) -> str:
 
 
 def process_hv_results(
-    results_raw: list[nodes.Node],
-    backends: list[str],
-    env: SphinxEnvType,
-    docname: str,
+    results_raw: list[nodes.Node], backends: list[str], env: SphinxEnvType
 ) -> list[nodes.Node]:
     n_blocks = 3
     if len(results_raw) != n_blocks * len(backends):
@@ -78,7 +75,7 @@ def process_hv_results(
         results.append(plot)
 
     for url in urls["js"]:
-        NbMetadataCollector.add_js_file(env, docname, f"holoviews-{url}", url, {})
+        NbMetadataCollector.add_js_file(env, env.docname, f"holoviews-{url}", url, {})
 
     if len(results) == 1:
         return results
@@ -140,5 +137,5 @@ class HoloViewsDirective(SphinxDirective):
         ):
             results_raw = execute_cells(cells, self.state.document)
         return process_hv_results(
-            results_raw, backends, cast("SphinxEnvType", self.env), self.env.docname
+            results_raw, backends, cast("SphinxEnvType", self.env)
         )
