@@ -10,6 +10,7 @@ import signal
 import sys
 import tempfile
 from asyncio.subprocess import PIPE, create_subprocess_exec
+from contextlib import suppress
 from dataclasses import KW_ONLY, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload, override
@@ -172,10 +173,6 @@ class ForkingProvisioner(KernelProvisionerBase):
     _output_surfaced: bool = field(init=False, default=False)
     _shutdown_initiated: bool = field(init=False, default=False)
 
-    def initiate_shutdown(self) -> None:
-        """After calling, we don’t treat SIGKILL as unexpected."""
-        self._shutdown_initiated = True
-
     SERVERS: ClassVar[dict[tuple[tuple[str, ...], str], KernelForkServer]] = {}
 
     @property
@@ -239,13 +236,14 @@ class ForkingProvisioner(KernelProvisionerBase):
 
     @override
     async def kill(self, restart: bool = False) -> None:
-        assert self.pid
-        os.kill(self.pid, signal.SIGKILL)
+        self._shutdown_initiated = True
+        if self.pid:
+            with suppress(ProcessLookupError):
+                os.kill(self.pid, signal.SIGKILL)
 
     @override
     async def terminate(self, restart: bool = False) -> None:
-        assert self.pid
-        os.kill(self.pid, signal.SIGTERM)
+        await self.kill(restart=restart)
 
     @override
     async def launch_kernel(
@@ -347,10 +345,15 @@ class ForkingKernelManager(AsyncKernelManager):
         return cmd
 
     @override
-    async def _async_shutdown_kernel(
-        self, now: bool = False, restart: bool = False
+    async def finish_shutdown(
+        self,
+        waittime: float | None = None,
+        pollinterval: float = 0.1,
+        restart: bool = False,
     ) -> None:
         # For speed, we just kill the kernel
         if self.has_kernel:
-            self.provisioner.initiate_shutdown()
-        await super()._async_shutdown_kernel(now=True, restart=restart)
+            await self.provisioner.kill(restart=restart)
+            await self.provisioner.wait()
+
+    _async_finish_shutdown = finish_shutdown
