@@ -26,7 +26,7 @@ optional-dependencies.holoviews = [ "holoviews", "sphinx-design" ]
 urls.Documentation = "https://sphinx-exec-jupyter.readthedocs.io/"
 urls.Source = "https://github.com/flying-sheep/sphinx-exec-jupyter"
 entry-points."jupyter_client.kernel_provisioners".forking_provisioner = "sphinx_exec_jupyter._kernel_mgr:ForkingProvisioner"
-entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.hv_mimes:HoloViewsMimeRenderer"
+entry-points."myst_nb.mime_renderers".holoviews = "sphinx_exec_jupyter.mime_handlers:SEJMimeRenderer"
 
 [tool.hatch]
 version.source = "vcs"
