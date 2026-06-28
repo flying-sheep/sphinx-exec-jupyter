@@ -26,19 +26,13 @@ def maybe_patch_myst_nb(
     if `is_local` is False, respect `config.exec_jupyter_patch_myst_nb`.
     """
     code = code or config.exec_jupyter_code
-    do_patch = (is_local or config.exec_jupyter_patch_myst_nb) and (
-        code or config.exec_jupyter_kernel != "python3"
-    )
-    with (
-        patch_myst_nb(code, kernel_name=config.exec_jupyter_kernel)
-        if do_patch
-        else nullcontext()
-    ):
+    do_patch = (is_local or config.exec_jupyter_patch_myst_nb) and code
+    with patch_myst_nb(code) if do_patch else nullcontext():
         yield
 
 
 @contextmanager
-def patch_myst_nb(code: str, *, kernel_name: str) -> Generator[None]:
+def patch_myst_nb(code: str) -> Generator[None]:
     from . import ForkingKernelManager  # noqa: PLC0415
 
     class F(ForkingKernelManager):
@@ -47,7 +41,7 @@ def patch_myst_nb(code: str, *, kernel_name: str) -> Generator[None]:
 
     orig_executenb = jupyter_cache.executors.utils.executenb
     jupyter_cache.executors.utils.executenb = partial(
-        orig_executenb, kernel_manager_class=F, kernel_name=kernel_name
+        orig_executenb, kernel_manager_class=F
     )
 
     try:

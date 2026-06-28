@@ -38,7 +38,9 @@ class ExecPendingNodes(SphinxTransform):
 
         all_cells = [c for node in pending for c in node["cells"]]
         with maybe_patch_myst_nb(self.config, code=code):
-            all_results = execute_cells(all_cells, self.document)
+            all_results = execute_cells(
+                all_cells, self.document, kernel_name=self.config.exec_jupyter_kernel
+            )
 
         env = cast("SphinxEnvType", self.env)
         it = iter(all_results)

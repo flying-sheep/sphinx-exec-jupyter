@@ -25,11 +25,16 @@ class ExtData(TypedDict, total=False):
     count: int
 
 
-def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node]:
+def execute_cells(
+    cells: list[str], document: nodes.document, *, kernel_name: str
+) -> list[nodes.Node]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = v4.writes(
         v4.new_notebook(
-            metadata=NotebookNode(language_info=NotebookNode(name="python")),
+            metadata=NotebookNode(
+                kernel_info=dict(name=kernel_name),
+                language_info=NotebookNode(name="python"),
+            ),
             cells=[v4.new_code_cell(cell) for cell in cells],
         )
     )
