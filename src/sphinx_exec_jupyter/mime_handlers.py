@@ -8,7 +8,7 @@ from itertools import chain
 from types import MappingProxyType
 from typing import TYPE_CHECKING, override
 
-from ipython.core import display
+from IPython.core import display
 from myst_nb.core.render import MimeRenderPlugin
 
 if TYPE_CHECKING:
