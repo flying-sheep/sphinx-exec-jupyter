@@ -36,7 +36,7 @@ envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
 envs.default.scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
 envs.default.scripts.docs-clean = "rm -rf docs/_build {args}"
 envs.default.scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
-envs.hatch-test.extra-dependencies = [ "anyio", "nbformat-types", "pytest-mock" ]
+envs.hatch-test.extra-dependencies = [ "anyio", "matplotlib", "nbformat-types", "pytest-mock" ]
 envs.hatch-test.matrix = [
   { python = [ "3.14", "3.12" ], feature-set = [ "full", "min" ] },
 ]

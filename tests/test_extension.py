@@ -97,7 +97,6 @@ def test_shared_kernel(tmp_path: Path, first: str, second: str) -> None:
         assert lines[1] == "holoviews"
 
 
-@pytest.mark.skipif(not find_spec("matplotlib"), reason="matplotlib not installed")
 def test_add_image_dimensions(tmp_path: Path) -> None:
     rst = """\
 .. exec-jupyter::
