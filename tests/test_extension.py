@@ -109,5 +109,6 @@ def test_add_image_dimensions(tmp_path: Path) -> None:
 
     [out] = run(rst, tmp_path).values()
 
+    assert "image/png" in out
     assert "width" in out["image/png"].attributes
     assert "height" in out["image/png"].attributes
