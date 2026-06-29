@@ -6,6 +6,7 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import pytest
+from docutils import nodes
 from sphinx.testing.util import SphinxTestApp
 
 if TYPE_CHECKING:
@@ -28,12 +29,19 @@ Test
     (tmp_path / "conf.py").write_text('extensions = ["sphinx_exec_jupyter"]\n')
     (tmp_path / "index.rst").write_text(rst)
     app = SphinxTestApp("html", srcdir=tmp_path)
-    try:
-        app.build()
-        html = (app.outdir / "index.html").read_text()
-        assert "exec_jupyter works" in html
-    finally:
-        app.cleanup()
+
+    app.build()
+    doc = app.env.get_doctree("index")
+    app.cleanup()
+
+    [cell] = doc.findall(
+        lambda n: isinstance(n, nodes.Element) and "cell" in n["classes"]
+    )
+    assert isinstance(cell, nodes.container)
+    assert isinstance(cell.children[1].children[0], nodes.literal_block)
+    out = cell.children[1].children[0].astext()
+
+    assert out == "exec_jupyter works\n"
 
 
 @pytest.mark.parametrize(
@@ -66,11 +74,18 @@ Test
     (tmp_path / "conf.py").write_text('extensions = ["sphinx_exec_jupyter"]\n')
     (tmp_path / "index.rst").write_text(rst)
     app = SphinxTestApp("html", srcdir=tmp_path)
-    try:
-        app.build()
-        html = (app.outdir / "index.html").read_text()
-        assert "42" in html
-        if any_hv:
-            assert "holoviews" in html
-    finally:
-        app.cleanup()
+
+    app.build()
+    doc = app.env.get_doctree("index")
+    app.cleanup()
+
+    _, cell = doc.findall(
+        lambda n: isinstance(n, nodes.Element) and "cell" in n["classes"]
+    )
+    assert isinstance(cell, nodes.container)
+    assert isinstance(cell.children[1].children[0], nodes.literal_block)
+    lines = cell.children[1].children[0].astext().splitlines()
+
+    assert lines[0] == "42"
+    if any_hv:
+        assert lines[1] == "holoviews"
