@@ -25,7 +25,7 @@ class ExtData(TypedDict, total=False):
     count: int
 
 
-def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node]:
+def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Element]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = v4.writes(
         v4.new_notebook(
@@ -41,13 +41,13 @@ def execute_cells(cells: list[str], document: nodes.document) -> list[nodes.Node
         parser.parse(notebook_json, document)
 
     # extract nodes and restore document
-    nodes = document.children[after_last_child:]
+    executed = document.children[after_last_child:]
     del document.children[after_last_child:]
     for key in ["words", "minutes"]:
         document.substitution_names.pop(f"wordcount-{key}", None)
         document.substitution_defs.pop(f"wordcount-{key}", None)
 
-    return nodes
+    return executed
 
 
 @contextmanager

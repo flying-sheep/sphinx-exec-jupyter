@@ -50,8 +50,8 @@ def hv_preload(backends: Iterable[str], exec_code: str) -> str:
 
 
 def process_hv_results(
-    results_raw: list[nodes.Node], backends: list[str], env: SphinxEnvType
-) -> list[nodes.Node]:
+    results_raw: list[nodes.Element], backends: list[str], env: SphinxEnvType
+) -> list[nodes.Element]:
     n_blocks = 3
     if len(results_raw) != n_blocks * len(backends):
         msg = "Unexpected number of outputs from HoloViews execution:\n" + "\n\n".join(
@@ -60,18 +60,12 @@ def process_hv_results(
         raise ExtensionError(msg)
 
     urls: dict[str, list[str]] = {"js": list(JS_URLS), "css": []}
-    results: list[nodes.Node] = []
+    results: list[nodes.Element] = []
     for _header, plot, urls_cell in batched(results_raw, n_blocks):
-        try:
+        if len(urls_cell.children) > 1:  # no error happend
             new_urls = json.loads(urls_cell.children[1].children[0].astext())
-        except Exception as e:
-            e.add_note(
-                "Unexpected output when collecting HoloViews URLs:\n"
-                + urls_cell.pformat()
-            )
-            raise
-        urls["js"] += new_urls["js"]
-        urls["css"] += new_urls["css"]
+            urls["js"] += new_urls["js"]
+            urls["css"] += new_urls["css"]
         results.append(plot)
 
     for url in urls["js"]:

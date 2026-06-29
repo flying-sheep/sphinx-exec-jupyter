@@ -44,18 +44,15 @@ It can be configured with the following settings:
 Examples
 --------
 
-.. code-block:: rst
+Just use it like a code block:
+
+..  code-block:: rst
 
     ..  exec-jupyter::
 
-        import pandas as pd
+        <code>
 
-        pd.DataFrame(dict(
-            A=[1, 2, 3],
-            B=[4, 5, 6],
-        ))
-
-results in:
+The code gets executed and you see both code and results:
 
 ..  exec-jupyter::
 
@@ -65,6 +62,23 @@ results in:
         A=[1, 2, 3],
         B=[4, 5, 6],
     ))
+
+If you use :confval:`exec_jupyter_code`,
+you can’t use IPython magic commands in it.
+
+The following example uses matplotlib ``%`` magics, which could be spelled as
+``matplotlib.use('module://matplotlib_inline.backend_inline')`` and
+``matplotlib_inline.backend_inline.set_matplotlib_formats('retina')`` in preload code.
+
+..  exec-jupyter::
+
+    %matplotlib inline
+    %config InlineBackend.figure_format='retina'
+
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(4, 2))
+    plt.plot([1, 2, 1]);
 
 ``sphinx_exec_jupyter.holoviews``
 ---------------------------------
