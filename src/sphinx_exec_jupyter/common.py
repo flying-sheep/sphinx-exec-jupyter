@@ -29,15 +29,7 @@ def execute_cells(
     cells: list[str], document: nodes.document, *, kernel_name: str
 ) -> list[nodes.Element]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
-    notebook_json = v4.writes(
-        v4.new_notebook(
-            metadata=NotebookNode(
-                kernel_info=dict(name=kernel_name),
-                language_info=NotebookNode(name="python"),
-            ),
-            cells=[v4.new_code_cell(cell) for cell in cells],
-        )
-    )
+    notebook_json = v4.writes(_python_notebook(cells, kernel_name))
 
     # execute notebook and append resulting nodes to document
     parser = myst_nb.sphinx_.Parser()
@@ -53,6 +45,16 @@ def execute_cells(
         document.substitution_defs.pop(f"wordcount-{key}", None)
 
     return executed
+
+
+def _python_notebook(cells: list[str], kernel_name: str) -> NotebookNode:
+    return v4.new_notebook(
+        metadata=NotebookNode(
+            kernelspec=dict(name=kernel_name, display_name="", language="python"),
+            language_info=NotebookNode(name="python"),
+        ),
+        cells=[v4.new_code_cell(cell) for cell in cells],
+    )
 
 
 @contextmanager

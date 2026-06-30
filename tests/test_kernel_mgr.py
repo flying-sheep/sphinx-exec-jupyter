@@ -12,6 +12,7 @@ import pytest
 
 from sphinx_exec_jupyter._kernel_mgr import FORK_ENV_VAR, ForkingProvisioner
 from sphinx_exec_jupyter._kernel_mgr.myst import patch_myst_nb
+from sphinx_exec_jupyter.common import _python_notebook
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -104,9 +105,6 @@ def test_python_interpreter_flags(
     (kernel_dir / "kernel.json").write_text(json.dumps(kernelspec))
     monkeypatch.setenv("JUPYTER_PATH", str(tmp_path))
 
-    nb = nbformat.v4.new_notebook(
-        metadata=dict(kernel_name="python3-frozen"),
-        cells=[nbformat.v4.new_code_cell("1 + 1")],
-    )
+    nb = _python_notebook(["1 + 1"], "python3-frozen")
     with patch_myst_nb(""):
         jce.executenb(nb)
