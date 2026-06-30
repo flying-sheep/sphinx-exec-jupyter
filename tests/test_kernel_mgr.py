@@ -12,6 +12,7 @@ import pytest
 
 from sphinx_exec_jupyter._kernel_mgr import FORK_ENV_VAR, ForkingProvisioner
 from sphinx_exec_jupyter._kernel_mgr.myst import patch_myst_nb
+from sphinx_exec_jupyter.common import _python_notebook
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,7 +32,7 @@ def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) ->
     prov = mocker.spy(ForkingProvisioner, "__init__")
     nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell(code)])
 
-    with patch_myst_nb(preload, kernel_name="python3"):
+    with patch_myst_nb(preload):
         node = cast("nbt.Document", jce.executenb(nb))
 
     assert prov.call_count == 1, "didn’t actually use our provisioner"
@@ -50,7 +51,7 @@ def test_no_fork_fallback(
     prov = mocker.spy(ForkingProvisioner, "__init__")
     nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("foo")])
 
-    with patch_myst_nb("foo = 1", kernel_name="python3"):
+    with patch_myst_nb("foo = 1"):
         node = cast("nbt.Document", jce.executenb(nb))
 
     assert prov.call_count == 0, "should not use the forking provisioner"
@@ -65,7 +66,7 @@ def test_shutdown(subtests: pytest.Subtests) -> None:
     nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
 
     for attempt in range(2):
-        with subtests.test(attempt=attempt), patch_myst_nb("", kernel_name="python3"):
+        with subtests.test(attempt=attempt), patch_myst_nb(""):
             jce.executenb(nb)
 
 
@@ -77,9 +78,7 @@ def test_caching() -> None:
     times: list[timedelta] = []
     for _attempt in range(3):
         start = datetime.now(tz=UTC)
-        with patch_myst_nb(
-            f"import time; time.sleep({sleep.total_seconds()})", kernel_name="python3"
-        ):
+        with patch_myst_nb(f"import time; time.sleep({sleep.total_seconds()})"):
             jce.executenb(nb)
         times.append(datetime.now(tz=UTC) - start)
 
@@ -106,6 +105,6 @@ def test_python_interpreter_flags(
     (kernel_dir / "kernel.json").write_text(json.dumps(kernelspec))
     monkeypatch.setenv("JUPYTER_PATH", str(tmp_path))
 
-    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("1 + 1")])
-    with patch_myst_nb("", kernel_name="python3-frozen"):
+    nb = _python_notebook(["1 + 1"], "python3-frozen")
+    with patch_myst_nb(""):
         jce.executenb(nb)

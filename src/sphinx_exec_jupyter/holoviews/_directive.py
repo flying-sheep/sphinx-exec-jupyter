@@ -129,7 +129,9 @@ class HoloViewsDirective(SphinxDirective):
         with maybe_patch_myst_nb(
             self.config, code=hv_preload(backends, self.config.exec_jupyter_code)
         ):
-            results_raw = execute_cells(cells, self.state.document)
+            results_raw = execute_cells(
+                cells, self.state.document, kernel_name=self.config.exec_jupyter_kernel
+            )
         return process_hv_results(
             results_raw, backends, cast("SphinxEnvType", self.env)
         )

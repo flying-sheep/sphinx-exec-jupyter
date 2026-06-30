@@ -24,4 +24,6 @@ class ExecJupyterDirective(SphinxDirective):
         if self.config.exec_jupyter_isolate_per_document:
             return [PendingExecNode(cells=[code], hv_backends=None)]
         with maybe_patch_myst_nb(self.config):
-            return execute_cells([code], self.state.document)
+            return execute_cells(
+                [code], self.state.document, kernel_name=self.config.exec_jupyter_kernel
+            )
