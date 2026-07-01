@@ -27,11 +27,9 @@ html_theme = "furo"
 
 if _gh_url := os.environ.get("READTHEDOCS_GIT_CLONE_URL"):
     _gh_url = _gh_url.removesuffix(".git")
-    print("GH path:", PurePosixPath(urlparse(_gh_url).path).parts)
-    _gh_user, _gh_repo = PurePosixPath(urlparse(_gh_url).path).parts
+    _gh_user, _gh_repo = PurePosixPath(urlparse(_gh_url).path).parts[1:]
 else:
     _gh_user = _gh_repo = None
-print("GH info:", _gh_user, _gh_repo)
 
 html_theme_options = dict(
     source_repository=(_gh_url or ""),
