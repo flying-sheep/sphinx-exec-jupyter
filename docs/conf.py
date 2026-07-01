@@ -31,15 +31,21 @@ if _gh_url := os.environ.get("READTHEDOCS_GIT_CLONE_URL"):
 else:
     _gh_user = _gh_repo = None
 
+_git_id = (
+    os.environ["READTHEDOCS_GIT_COMMIT_HASH"]
+    if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external"
+    else os.environ.get("READTHEDOCS_GIT_IDENTIFIER")
+)
+
 html_theme_options = dict(
     source_repository=(_gh_url or ""),
-    source_branch=os.environ.get("READTHEDOCS_GIT_IDENTIFIER"),
+    source_branch=_git_id,
     source_directory="docs",
 )
 html_context = dict(
     github_user=_gh_user,
     github_repo=_gh_repo,
-    github_version=os.environ.get("READTHEDOCS_GIT_IDENTIFIER"),
+    github_version=_git_id,
     current_version=os.environ.get("READTHEDOCS_VERSION"),
     slug=os.environ.get("READTHEDDOCS_PROJECT"),
 )
