@@ -43,6 +43,8 @@ html_theme_options = dict(
     source_directory="docs",
 )
 html_context = dict(
+    READTHEDOCS=os.environ.get("READTHEDOCS") == "True",
+    display_github=True,
     github_user=_gh_user,
     github_repo=_gh_repo,
     github_version=_git_id,
