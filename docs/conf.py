@@ -32,7 +32,7 @@ else:
     _gh_user = _gh_repo = None
 
 _git_id = (
-    os.environ["READTHEDOCS_GIT_COMMIT_HASH"]
+    None  # this would have to be the base branch of the PR
     if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external"
     else os.environ.get("READTHEDOCS_GIT_IDENTIFIER")
 )
