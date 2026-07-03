@@ -1,24 +1,34 @@
 # SPDX-License-Identifier: MPL-2.0
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import jupyter_cache.executors.utils as jce
 import nbformat
 import pytest
 
-from sphinx_exec_jupyter._kernel_mgr import FORK_ENV_VAR, ForkingProvisioner
+from sphinx_exec_jupyter._kernel_mgr import (
+    FORK_ENV_VAR,
+    ForkingProvisioner,
+    KernelForkServer,
+)
 from sphinx_exec_jupyter._kernel_mgr.myst import patch_myst_nb
 from sphinx_exec_jupyter.common import _python_notebook
 
 if TYPE_CHECKING:
+    from asyncio.subprocess import Process
     from pathlib import Path
 
     from nbformat_types.versions import current as nbt
     from pytest_mock import MockerFixture
+
+    from sphinx_exec_jupyter._kernel_mgr import Cmd, Resp
 
 
 @pytest.mark.parametrize(
@@ -86,6 +96,63 @@ def test_caching() -> None:
     # since it’s the one that sets up the interpreter and then sleeps
     assert times[0] >= times[1] + sleep
     assert times[0] >= times[2] + sleep
+
+
+async def test_fork_server_concurrent_calls_dont_cross_talk() -> None:
+    """Concurrent `fork`/`wait` calls on a shared `KernelForkServer` must not read
+    each other’s replies off the pipe.
+
+    The fake server below always replies in the order it received commands,
+    exactly like the real one (`fork-server.py`) does.
+    It replies to `fork` slower than to `wait`, so we trigger a race condition:
+    Without lock, `fork()`→`wait()` results in switched replies,
+    i.e. a `fork()` reads back `{"code": ...}` and crashes with `KeyError: 'pid'`.
+    """
+    cmd_queue: asyncio.Queue[Cmd] = asyncio.Queue()
+    resp_queue: asyncio.Queue[Resp] = asyncio.Queue()
+    last_cmd: str | None = None
+
+    class FakeStdin:
+        def write(self, data: bytes) -> None:
+            nonlocal last_cmd
+            msg = json.loads(data)
+            last_cmd = msg["cmd"]
+            cmd_queue.put_nowait(msg)
+
+        async def drain(self) -> None:
+            if last_cmd == "fork":  # simulate `os.fork()` taking a moment
+                await asyncio.sleep(0.05)
+
+    class FakeStdout:
+        async def readline(self) -> bytes:
+            resp = await resp_queue.get()
+            return (json.dumps(resp) + "\n").encode()
+
+    async def fake_fork_server() -> None:
+        next_pid = 1
+        while True:
+            cmd = await cmd_queue.get()
+            if cmd["cmd"] == "fork":
+                await resp_queue.put({"pid": next_pid})
+                next_pid += 1
+            else:
+                await resp_queue.put({"code": 0})
+
+    server = KernelForkServer(py_cmd=(), code="")
+    fake_process = SimpleNamespace(
+        stdin=FakeStdin(), stdout=FakeStdout(), stderr=None, returncode=None
+    )
+    server.process = cast("Process", fake_process)
+    server_task = asyncio.create_task(fake_fork_server())
+    try:
+        fork_task = asyncio.create_task(server.fork(["ignored"], "log.txt"))
+        wait_task = asyncio.create_task(server.wait(123))
+        results = await asyncio.gather(fork_task, wait_task, return_exceptions=True)
+        assert results == [1, 0]
+    finally:
+        server_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await server_task
 
 
 def test_python_interpreter_flags(

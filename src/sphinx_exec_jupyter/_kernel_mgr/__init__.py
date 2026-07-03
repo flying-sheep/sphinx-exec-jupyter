@@ -9,9 +9,11 @@ import os
 import signal
 import sys
 import tempfile
+from asyncio import Lock
 from asyncio.subprocess import PIPE, create_subprocess_exec
 from contextlib import suppress
 from dataclasses import KW_ONLY, dataclass, field
+from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload, override
 
@@ -26,8 +28,8 @@ from .myst import maybe_patch_myst_nb
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
-    from collections.abc import Sequence
-    from typing import Literal
+    from collections.abc import Awaitable, Callable, Sequence
+    from typing import Concatenate, Literal
 
     from jupyter_client import KernelConnectionInfo
     from traitlets import Unicode
@@ -37,6 +39,7 @@ __all__ = [
     "FORK_ENV_VAR",
     "Cmd",
     "ForkingKernelManager",
+    "Resp",
     "forking_supported",
     "maybe_patch_myst_nb",
     "start_new_fork_kernel",
@@ -100,6 +103,17 @@ type Resp = ForkResp | WaitExitResp | ExitCodeResp
 RUN_SERVER_CODE = (importlib.resources.files(__name__) / "fork-server.py").read_text()
 
 
+def _locked[**P, R](
+    method: Callable[Concatenate[KernelForkServer, P], Awaitable[R]],
+) -> Callable[Concatenate[KernelForkServer, P], Awaitable[R]]:
+    @wraps(method)
+    async def wrapper(self: KernelForkServer, *args: P.args, **kwargs: P.kwargs) -> R:
+        async with self._lock:
+            return await method(self, *args, **kwargs)
+
+    return wrapper
+
+
 @dataclass
 class KernelForkServer:
     """A server that executes code and allows forking off kernels after."""
@@ -107,7 +121,10 @@ class KernelForkServer:
     py_cmd: tuple[str, ...]
     code: str
     process: Process | None = field(init=False, default=None)
+    # Prevent race conditions with multiple kernels
+    _lock: Lock = field(init=False, default_factory=Lock)
 
+    @_locked
     async def fork(self, cmd: Sequence[str], log_path: str) -> int:
         if self.process is None:
             code = RUN_SERVER_CODE.replace('"USER_CODE_INSERTION_POINT"', self.code)
@@ -118,12 +135,14 @@ class KernelForkServer:
         resp = await self._send_cmd(ForkCmd(cmd="fork", argv=cmd, log=log_path))
         return resp["pid"]
 
+    @_locked
     async def get_exit_code(self, pid: int) -> int | None:
         if self.process is None:
             return None
         resp = await self._send_cmd(ExitCodeCmd(cmd="exit_code", pid=pid))
         return resp["code"]
 
+    @_locked
     async def wait(self, pid: int) -> int:
         resp = await self._send_cmd(WaitExitCmd(cmd="wait", pid=pid))
         return resp["code"]
