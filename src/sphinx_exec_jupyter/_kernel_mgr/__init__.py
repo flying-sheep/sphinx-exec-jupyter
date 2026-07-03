@@ -39,6 +39,7 @@ __all__ = [
     "FORK_ENV_VAR",
     "Cmd",
     "ForkingKernelManager",
+    "Resp",
     "forking_supported",
     "maybe_patch_myst_nb",
     "start_new_fork_kernel",
