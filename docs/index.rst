@@ -109,6 +109,10 @@ This extension adds a setting and one more directive:
     See here for syntax:
     https://www.sphinx-doc.org/en/master/usage/domains/restructuredtext.html#directive-rst-directive
 
+While executing code, a constant ``FAKE_BACKEND`` is defined.
+I is :data:`None` at runtime, but is rendered as the current backend (e.g. ``'bokeh'``) in the code.
+:func:`holoviz.extension` is also patched to do nothing when passed :data:`None`.
+
 .. _holoviews-examples:
 
 Examples
@@ -135,11 +139,15 @@ With multiple backends specified (needs the ``sphinx_design`` extension to be lo
     ..  holoviews::
         :backends: bokeh,matplotlib,plotly
 
+        hv.extension(FAKE_BACKEND)
+
         hv.Curve([1, 2, 3, 2, 1])
 
 results in:
 
 ..  holoviews::
     :backends: bokeh,matplotlib,plotly
+
+    hv.extension(FAKE_BACKEND)
 
     hv.Curve([1, 2, 3, 2, 1])
