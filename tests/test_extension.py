@@ -55,9 +55,9 @@ def run(
 
 def test_exec_jupyter_directive(tmp_path: Path) -> None:
     rst = """\
-.. exec-jupyter::
+..  exec-jupyter::
 
-   print('exec_jupyter works')
+    print('exec_jupyter works')
 """
 
     [out] = run(rst, tmp_path).values()
@@ -70,7 +70,7 @@ def test_exec_jupyter_directive(tmp_path: Path) -> None:
     [
         pytest.param(
             *(first, second),
-            id=f"{first}-{second}",
+            id="-".join(p.replace("-", "_") for p in (first, second)),
             marks=SKIP_NO_HV if "holoviews" in (first, second) else (),
         )
         for first, second in product(("exec-jupyter", "holoviews"), repeat=2)
@@ -97,9 +97,23 @@ def test_shared_kernel(tmp_path: Path, first: str, second: str) -> None:
         assert lines[1] == "holoviews"
 
 
+@SKIP_NO_HV
+def test_holoviews_fake_backend(tmp_path: Path) -> None:
+    rst = """\
+..  holoviews::
+
+    print(FAKE_BACKEND)
+"""
+
+    [(code, out)] = run(rst, tmp_path).items()
+
+    assert code == "print('bokeh')"
+    assert out["text/plain"].astext() == "None\n"
+
+
 def test_add_image_dimensions(tmp_path: Path) -> None:
     rst = """\
-.. exec-jupyter::
+..  exec-jupyter::
 
     %matplotlib inline
 

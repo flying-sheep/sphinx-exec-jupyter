@@ -39,13 +39,25 @@ JS_URLS = [
     f"{CDN_DIST}panel.min.js",
 ]
 
+HV_EXT_PATCH = """\
+def __call__(self, *backends, __orig_call=hv.extension.__call__, **kw):
+    if backends == (None,):
+        return
+    return __orig_call(self, *backends, **kw)
+
+hv.extension.__call__ = __call__
+del __call__
+"""
+
 
 def hv_preload(backends: Iterable[str], exec_code: str) -> str:
     return (
         "import holoviews as hv\n"
         f"for backend in {json.dumps(sorted(backends))}:\n"
         f"    hv.extension(backend)\n"
-        f"{exec_code}"
+        f"{HV_EXT_PATCH}\n"
+        f"{exec_code}\n"
+        "FAKE_BACKEND = None\n"
     )
 
 
@@ -61,11 +73,18 @@ def process_hv_results(
 
     urls: dict[str, list[str]] = {"js": list(JS_URLS), "css": []}
     results: list[nodes.Element] = []
-    for _header, plot, urls_cell in batched(results_raw, n_blocks):
+    for backend, (_header, plot, urls_cell) in zip(
+        backends, batched(results_raw, n_blocks), strict=True
+    ):
         if len(urls_cell.children) > 1:  # no error happend
             new_urls = json.loads(urls_cell.children[1].children[0].astext())
             urls["js"] += new_urls["js"]
             urls["css"] += new_urls["css"]
+        code = plot.children[0].children[0]
+        assert isinstance(code, nodes.literal_block)
+        code.children[0] = nodes.Text(
+            code.children[0].replace("FAKE_BACKEND", repr(backend))
+        )
         results.append(plot)
 
     for url in urls["js"]:
