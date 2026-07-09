@@ -39,7 +39,7 @@ JS_URLS = [
     f"{CDN_DIST}panel.min.js",
 ]
 
-HV_EXT_PATCH = """\
+HV_PATCH = """\
 def __call__(self, *backends, __orig_call=hv.extension.__call__, **kw):
     if backends == (None,):
         return
@@ -47,6 +47,22 @@ def __call__(self, *backends, __orig_call=hv.extension.__call__, **kw):
 
 hv.extension.__call__ = __call__
 del __call__
+
+# https://github.com/holoviz/holoviews/issues/6950
+import holoviews.plotting.mpl as _hv_mpl
+
+def load_nb(cls, inline=True):
+    import matplotlib
+
+    if matplotlib.get_backend() not in {
+        "agg",
+        "module://ipykernel.pylab.backend_inline",
+        "module://matplotlib_inline.backend_inline",
+    }:
+        plt.switch_backend("agg")
+
+_hv_mpl.MPLRenderer.load_nb = classmethod(load_nb)
+del load_nb, _hv_mpl
 """
 
 
@@ -55,7 +71,7 @@ def hv_preload(backends: Iterable[str], exec_code: str) -> str:
         "import holoviews as hv\n"
         f"for backend in {json.dumps(sorted(backends))}:\n"
         f"    hv.extension(backend)\n"
-        f"{HV_EXT_PATCH}\n"
+        f"{HV_PATCH}\n"
         f"{exec_code}\n"
         "FAKE_BACKEND = None\n"
     )
