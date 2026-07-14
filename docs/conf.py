@@ -30,6 +30,7 @@ intersphinx_mapping = dict(
     python=("https://docs.python.org/3/", None),
     holoviz=("https://holoviews.org/", None),
 )
+nb_execution_show_tb = os.environ.get("READTHEDOCS") == "True"
 
 # Theme stuff
 
