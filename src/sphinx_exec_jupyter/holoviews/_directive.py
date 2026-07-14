@@ -52,9 +52,9 @@ del __call__
 import holoviews.plotting.mpl as _hv_mpl
 
 def load_nb(cls, inline=True):
-    import matplotlib
+    import matplotlib.pyplot as plt
 
-    if matplotlib.get_backend() not in {
+    if plt.get_backend() not in {
         "agg",
         "module://ipykernel.pylab.backend_inline",
         "module://matplotlib_inline.backend_inline",

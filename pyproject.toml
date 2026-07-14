@@ -79,5 +79,6 @@ norecursedirs = [ "src/sphinx_exec_jupyter/holoviews" ]  # doctests can’t impo
 strict = true
 
 [tool.coverage]
+run.omit = [ "*/*-*.py" ]
 run.patch = [ "subprocess" ]
 run.source = [ "." ]
