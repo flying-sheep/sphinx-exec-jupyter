@@ -18,11 +18,11 @@ SKIP_NO_HV = pytest.mark.skipif(
 
 
 def run(
-    rst: str, tmp_path: Path
+    rst: str, tmp_path: Path, *, conf: dict[str, object] | None = None
 ) -> dict[str, dict[str, nodes.literal_block | nodes.image]]:
     (tmp_path / "conf.py").write_text('extensions = ["sphinx_exec_jupyter"]\n')
     (tmp_path / "index.rst").write_text(rst)
-    app = SphinxTestApp("html", srcdir=tmp_path)
+    app = SphinxTestApp("html", srcdir=tmp_path, confoverrides=conf)
 
     app.build()
     doc = app.env.get_doctree("index")
@@ -126,3 +126,24 @@ def test_add_image_dimensions(tmp_path: Path) -> None:
     assert "image/png" in out
     assert "width" in out["image/png"].attributes
     assert "height" in out["image/png"].attributes
+
+
+def test_mpl_inline_after_warm_preload(tmp_path: Path) -> None:
+    """`matplotlib_inline` registration triggered before forking must still
+    apply to the real kernel, not just the (discarded) warm-up shell."""
+    rst = """\
+..  exec-jupyter::
+
+    import matplotlib.pyplot as plt
+    plt.plot([1, 2, 3]);
+"""
+
+    preload = (
+        "import matplotlib\n"
+        "matplotlib.use('module://matplotlib_inline.backend_inline')\n"
+        "import matplotlib.pyplot as plt\n"
+        "plt.figure()"
+    )
+    [out] = run(rst, tmp_path, conf=dict(exec_jupyter_code=preload)).values()
+
+    assert "image/png" in out

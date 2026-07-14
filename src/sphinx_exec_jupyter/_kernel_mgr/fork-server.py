@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import builtins
+from IPython.core.interactiveshell import InteractiveShell
 
-builtins.__IPYTHON__ = True
+InteractiveShell.instance()  # so preload code sees a real `get_ipython()`
 
-del builtins
+del InteractiveShell
 
 "USER_CODE_INSERTION_POINT"
 
@@ -22,11 +22,14 @@ def __main() -> None:  # noqa: C901
     from typing import TYPE_CHECKING
 
     import ipykernel.kernelapp
+    from IPython.core.interactiveshell import InteractiveShell
 
     if TYPE_CHECKING:
         from typing import Never
 
         from sphinx_exec_jupyter._kernel_mgr import Cmd
+
+    InteractiveShell.clear_instance()
 
     exit_codes: dict[int, int] = {}
 

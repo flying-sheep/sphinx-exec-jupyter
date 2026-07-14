@@ -11,7 +11,7 @@ import sys
 import tempfile
 from asyncio import Lock
 from asyncio.subprocess import PIPE, create_subprocess_exec
-from contextlib import suppress
+from contextlib import ExitStack, suppress
 from dataclasses import KW_ONLY, dataclass, field
 from functools import wraps
 from pathlib import Path
@@ -44,6 +44,9 @@ __all__ = [
     "maybe_patch_myst_nb",
     "start_new_fork_kernel",
 ]
+
+
+FILES = importlib.resources.files(__name__)
 
 
 #: Environment variable to force-enable (``1``) or force-disable (``0``) the
@@ -352,6 +355,14 @@ class ForkingKernelManager(AsyncKernelManager):
     def __init__(self, code: str, **kw: object) -> None:
         super().__init__(**kw)
         self.code = code
+        self._resources = ExitStack()
+        self._reactivate_mpl_inline = self._resources.enter_context(
+            importlib.resources.as_file(FILES / "reactivate-mpl-inline.py")
+        )
+
+    def __del__(self) -> None:
+        self._resources.close()
+        super().__del__()
 
     @override
     def format_kernel_cmd(self, extra_arguments: list[str] | None = None) -> list[str]:
@@ -361,7 +372,7 @@ class ForkingKernelManager(AsyncKernelManager):
         # so inject it as startup lines instead.
         if self.code and not forking_supported():
             cmd = [*cmd, f"--IPKernelApp.exec_lines={self.code}"]
-        return cmd
+        return [*cmd, f"--IPKernelApp.exec_files={self._reactivate_mpl_inline}"]
 
     @override
     async def finish_shutdown(
