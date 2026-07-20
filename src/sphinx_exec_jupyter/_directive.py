@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING
 
 from sphinx.util.docutils import SphinxDirective
 
-from sphinx_exec_jupyter._kernel_mgr import ForkingKernelManager
-
 from ._pending import PendingExecNode
 from .common import execute_cells
 
@@ -25,7 +23,9 @@ class ExecJupyterDirective(SphinxDirective):
         if self.config.exec_jupyter_isolate_per_document:
             return [PendingExecNode(cells=[code], hv_backends=None)]
         kernel_name = self.config.exec_jupyter_kernel
-        km = ForkingKernelManager(self.config.exec_jupyter_code)
         return execute_cells(
-            [code], self.state.document, kernel_name=kernel_name, km=km
+            [code],
+            self.state.document,
+            kernel_name=kernel_name,
+            prefix=self.config.exec_jupyter_code,
         )

@@ -16,7 +16,6 @@ from sphinx.errors import ExtensionError
 from sphinx.util.docutils import SphinxDirective
 from sphinx_design.shared import create_component
 
-from sphinx_exec_jupyter._kernel_mgr import ForkingKernelManager
 from sphinx_exec_jupyter._pending import PendingExecNode
 
 from ..common import execute_cells
@@ -162,9 +161,11 @@ class HoloViewsDirective(SphinxDirective):
             return [PendingExecNode(cells=cells, hv_backends=list(backends))]
 
         kernel_name = self.config.exec_jupyter_kernel
-        km = ForkingKernelManager(hv_preload(backends, self.config.exec_jupyter_code))
         results_raw = execute_cells(
-            cells, self.state.document, kernel_name=kernel_name, km=km
+            cells,
+            self.state.document,
+            kernel_name=kernel_name,
+            prefix=hv_preload(backends, self.config.exec_jupyter_code),
         )
         return process_hv_results(
             results_raw, backends, cast("SphinxEnvType", self.env)
