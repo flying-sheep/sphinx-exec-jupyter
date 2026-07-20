@@ -18,7 +18,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-  "myst-nb>=1.4",
+  "myst-nb>=1.5.0.dev0",
   "nbformat>=5.10.4",
   "sphinx>=9.1",
 ]
@@ -36,12 +36,22 @@ envs.default.dependencies = [ "furo", "matplotlib", "plotly" ]
 envs.default.scripts.docs-build = "sphinx-build -M html docs docs/_build {args:-W}"
 envs.default.scripts.docs-clean = "rm -rf docs/_build {args}"
 envs.default.scripts.docs-open = "python -m webbrowser docs/_build/html/index.html {args}"
-envs.hatch-test.extra-dependencies = [ "anyio", "matplotlib", "nbformat-types", "pytest-mock" ]
+envs.hatch-test.extra-dependencies = [
+  "anyio",
+  "matplotlib",
+  "nbformat-types",
+  "pytest-mock",
+  "pytest-rerunfailures",
+]
 envs.hatch-test.matrix = [
   { python = [ "3.14", "3.12" ], feature-set = [ "full", "min" ] },
 ]
 envs.hatch-test.overrides.matrix.feature-set.features = [ { value = "holoviews", if = [ "full" ] } ]
 envs.hatch-test.default-args = []
+
+[tool.uv]
+sources.myst-nb.branch = "kmc"
+sources.myst-nb.git = "git+https://github.com/flying-sheep/MyST-NB.git"
 
 [tool.ruff]
 lint.select = [ "ALL" ]
@@ -72,6 +82,10 @@ addopts = [
   "--import-mode=importlib",
   "--doctest-modules",
   "--pyargs",
+  "--reruns=2",
+  "--reruns-delay=1",
+  # jupyter_client’s `LocalPortCache` races across concurrent kernel starts
+  '--only-rerun=zmq\.error\.ZMQError: Address already in use',
 ]
 anyio_mode = "auto"
 filterwarnings = [ "error" ]

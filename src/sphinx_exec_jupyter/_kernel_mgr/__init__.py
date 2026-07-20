@@ -24,8 +24,6 @@ from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import KernelProvisionerBase
 from traitlets import Instance, default
 
-from .myst import maybe_patch_myst_nb
-
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
     from collections.abc import Awaitable, Callable, Sequence
@@ -40,8 +38,8 @@ __all__ = [
     "Cmd",
     "ForkingKernelManager",
     "Resp",
+    "forking_km_class",
     "forking_supported",
-    "maybe_patch_myst_nb",
     "start_new_fork_kernel",
 ]
 
@@ -387,3 +385,11 @@ class ForkingKernelManager(AsyncKernelManager):
             await self.provisioner.wait()
 
     _async_finish_shutdown = finish_shutdown
+
+
+def forking_km_class(code: str) -> type[ForkingKernelManager]:
+    class F(ForkingKernelManager):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(code, *args, **kwargs)
+
+    return F
