@@ -44,7 +44,8 @@ envs.hatch-test.overrides.matrix.feature-set.features = [ { value = "holoviews",
 envs.hatch-test.default-args = []
 
 [tool.uv]
-sources.myst-nb.git = "git+https://github.com/flying-sheep/MyST-NB.git@kmc"
+sources.myst-nb.branch = "kmc"
+sources.myst-nb.git = "git+https://github.com/flying-sheep/MyST-NB.git"
 
 [tool.ruff]
 lint.select = [ "ALL" ]
