@@ -38,6 +38,7 @@ __all__ = [
     "Cmd",
     "ForkingKernelManager",
     "Resp",
+    "forking_km_class",
     "forking_supported",
     "start_new_fork_kernel",
 ]
@@ -384,3 +385,11 @@ class ForkingKernelManager(AsyncKernelManager):
             await self.provisioner.wait()
 
     _async_finish_shutdown = finish_shutdown
+
+
+def forking_km_class(code: str) -> type[ForkingKernelManager]:
+    class F(ForkingKernelManager):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(code, *args, **kwargs)
+
+    return F

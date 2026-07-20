@@ -14,9 +14,9 @@ import pytest
 
 from sphinx_exec_jupyter._kernel_mgr import (
     FORK_ENV_VAR,
-    ForkingKernelManager,
     ForkingProvisioner,
     KernelForkServer,
+    forking_km_class,
 )
 from sphinx_exec_jupyter._myst_patch import patch_myst_nb
 from sphinx_exec_jupyter.common import _python_notebook
@@ -39,8 +39,7 @@ def execute(
         with patch_myst_nb(preload):
             node = jce.executenb(nb)
     else:
-        km = ForkingKernelManager(preload)
-        node = jce.executenb(nb, km=km)
+        node = jce.executenb(nb, kernel_manager_class=forking_km_class(preload))
     return cast("nbt.Document", node)
 
 
@@ -96,7 +95,9 @@ def test_shutdown(*, subtests: pytest.Subtests, patch: bool) -> None:
 
 def test_caching(*, patch: bool) -> None:
     sleep = timedelta(milliseconds=400)
-    preload = f"import time; time.sleep({sleep.total_seconds()})"
+    # the trailing comment keeps `patch`/`no_patch` from sharing a warm
+    # fork-server, which is cached by the exact preload string
+    preload = f"import time; time.sleep({sleep.total_seconds()})  # {patch=}"
 
     times: list[timedelta] = []
     for _attempt in range(3):

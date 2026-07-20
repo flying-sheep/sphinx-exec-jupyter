@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, TypedDict, cast, override
 import myst_nb.sphinx_
 from nbformat import NotebookNode, v4
 
-from ._kernel_mgr import ForkingKernelManager
+from ._kernel_mgr import forking_km_class
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -33,12 +33,8 @@ def execute_cells(
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = v4.writes(_python_notebook(cells, kernel_name))
 
-    class F(ForkingKernelManager):
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            super().__init__(prefix, *args, **kwargs)
-
     # execute notebook and append resulting nodes to document
-    parser = myst_nb.sphinx_.Parser(kernel_manager_class=F)
+    parser = myst_nb.sphinx_.Parser(kernel_manager_class=forking_km_class(prefix))
     after_last_child = len(document.children)
     with temp_source_code(document, notebook_json):
         parser.parse(notebook_json, document)

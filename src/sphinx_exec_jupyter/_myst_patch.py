@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import jupyter_cache.executors.utils
 
-from ._kernel_mgr import ForkingKernelManager
+from ._kernel_mgr import forking_km_class
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -39,14 +39,9 @@ def maybe_patch_myst_nb(app: Sphinx, config: Config) -> None:
 
 @contextmanager
 def patch_myst_nb(code: str) -> Generator[None]:
-
-    class F(ForkingKernelManager):
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            super().__init__(code, *args, **kwargs)
-
     orig_executenb = jupyter_cache.executors.utils.executenb
     jupyter_cache.executors.utils.executenb = partial(
-        orig_executenb, kernel_manager_class=F
+        orig_executenb, kernel_manager_class=forking_km_class(code)
     )
 
     try:
