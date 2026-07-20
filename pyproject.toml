@@ -18,7 +18,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-  "myst-nb>=1.4",
+  "myst-nb>=1.5.0.dev0",
   "nbformat>=5.10.4",
   "sphinx>=9.1",
 ]
@@ -42,6 +42,9 @@ envs.hatch-test.matrix = [
 ]
 envs.hatch-test.overrides.matrix.feature-set.features = [ { value = "holoviews", if = [ "full" ] } ]
 envs.hatch-test.default-args = []
+
+[tool.uv]
+sources.myst-nb.git = "git+https://github.com/executablebooks/MyST-NB.git"
 
 [tool.ruff]
 lint.select = [ "ALL" ]

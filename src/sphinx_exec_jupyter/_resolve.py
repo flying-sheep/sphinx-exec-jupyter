@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, cast, override
 
 from sphinx.transforms import SphinxTransform
 
-from ._kernel_mgr import maybe_patch_myst_nb
+from ._kernel_mgr import ForkingKernelManager
 from ._pending import PendingExecNode
 from .common import execute_cells
 
@@ -37,10 +37,10 @@ class ExecPendingNodes(SphinxTransform):
             code = None
 
         all_cells = [c for node in pending for c in node["cells"]]
-        with maybe_patch_myst_nb(self.config, code=code):
-            all_results = execute_cells(
-                all_cells, self.document, kernel_name=self.config.exec_jupyter_kernel
-            )
+        km = ForkingKernelManager(code or self.config.exec_jupyter_code)
+        all_results = execute_cells(
+            all_cells, self.document, kernel_name=self.config.exec_jupyter_kernel, km=km
+        )
 
         env = cast("SphinxEnvType", self.env)
         it = iter(all_results)

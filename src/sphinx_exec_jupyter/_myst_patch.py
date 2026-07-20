@@ -8,32 +8,37 @@ from typing import TYPE_CHECKING
 
 import jupyter_cache.executors.utils
 
+from ._kernel_mgr import ForkingKernelManager
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from sphinx.application import Sphinx
     from sphinx.config import Config
 
 
 __all__ = ["maybe_patch_myst_nb"]
 
 
-@contextmanager
-def maybe_patch_myst_nb(
-    config: Config, *, code: str | None = None, is_local: bool = True
-) -> Generator[None]:
-    """Patch myst-nb if needed.
+def maybe_patch_myst_nb(app: Sphinx, config: Config) -> None:
+    ctx = (
+        patch_myst_nb(config.exec_jupyter_code)
+        if config.exec_jupyter_patch_myst_nb and config.exec_jupyter_code
+        else nullcontext()
+    )
+    ctx.__enter__()
 
-    if `is_local` is False, respect `config.exec_jupyter_patch_myst_nb`.
-    """
-    code = code or config.exec_jupyter_code
-    do_patch = (is_local or config.exec_jupyter_patch_myst_nb) and code
-    with patch_myst_nb(code) if do_patch else nullcontext():
-        yield
+    def cleanup(app: Sphinx, exc: Exception | None) -> None:  # noqa: ARG001
+        if exc is None:
+            ctx.__exit__(None, None, None)
+        else:
+            ctx.__exit__(type(exc), exc, exc.__traceback__)
+
+    app.connect("build-finished", cleanup)
 
 
 @contextmanager
 def patch_myst_nb(code: str) -> Generator[None]:
-    from . import ForkingKernelManager  # noqa: PLC0415
 
     class F(ForkingKernelManager):
         def __init__(self, *args: object, **kwargs: object) -> None:

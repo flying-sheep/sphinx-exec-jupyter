@@ -10,15 +10,15 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import jupyter_cache.executors.utils as jce
-import nbformat
 import pytest
 
 from sphinx_exec_jupyter._kernel_mgr import (
     FORK_ENV_VAR,
+    ForkingKernelManager,
     ForkingProvisioner,
     KernelForkServer,
 )
-from sphinx_exec_jupyter._kernel_mgr.myst import patch_myst_nb
+from sphinx_exec_jupyter._myst_patch import patch_myst_nb
 from sphinx_exec_jupyter.common import _python_notebook
 
 if TYPE_CHECKING:
@@ -31,6 +31,24 @@ if TYPE_CHECKING:
     from sphinx_exec_jupyter._kernel_mgr import Cmd, Resp
 
 
+def execute(
+    preload: str, code: str, *, patch: bool, kernel_name: str = "python3"
+) -> nbt.Document:
+    nb = _python_notebook([code], kernel_name)
+    if patch:
+        with patch_myst_nb(preload):
+            node = jce.executenb(nb)
+    else:
+        km = ForkingKernelManager(preload)
+        node = jce.executenb(nb, km=km)
+    return cast("nbt.Document", node)
+
+
+@pytest.fixture(scope="session", params=[True, False], ids=["patch", "no_patch"])
+def patch(request: pytest.FixtureRequest) -> bool:
+    return request.param
+
+
 @pytest.mark.parametrize(
     ("preload", "code", "resp_str"),
     [
@@ -38,12 +56,12 @@ if TYPE_CHECKING:
         pytest.param("import builtins", "builtins.__IPYTHON__", "True", id="enhance"),
     ],
 )
-def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) -> None:
+def test_patch(
+    *, mocker: MockerFixture, preload: str, code: str, resp_str: str, patch: bool
+) -> None:
     prov = mocker.spy(ForkingProvisioner, "__init__")
-    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell(code)])
 
-    with patch_myst_nb(preload):
-        node = cast("nbt.Document", jce.executenb(nb))
+    node = execute(preload, code, patch=patch)
 
     assert prov.call_count == 1, "didn’t actually use our provisioner"
     [code_cell] = node["cells"]
@@ -54,15 +72,13 @@ def test_patch(mocker: MockerFixture, preload: str, code: str, resp_str: str) ->
 
 
 def test_no_fork_fallback(
-    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+    *, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, patch: bool
 ) -> None:
     """Without forking, kernels are exec-launched but still run the preload code."""
     monkeypatch.setenv(FORK_ENV_VAR, "0")
     prov = mocker.spy(ForkingProvisioner, "__init__")
-    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("foo")])
 
-    with patch_myst_nb("foo = 1"):
-        node = cast("nbt.Document", jce.executenb(nb))
+    node = execute("foo = 1", "foo", patch=patch)
 
     assert prov.call_count == 0, "should not use the forking provisioner"
     [code_cell] = node["cells"]
@@ -72,24 +88,20 @@ def test_no_fork_fallback(
     assert result["data"]["text/plain"] == "1"
 
 
-def test_shutdown(subtests: pytest.Subtests) -> None:
-    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
-
+def test_shutdown(*, subtests: pytest.Subtests, patch: bool) -> None:
     for attempt in range(2):
         with subtests.test(attempt=attempt), patch_myst_nb(""):
-            jce.executenb(nb)
+            execute("", "print('hi')", patch=patch)
 
 
-def test_caching() -> None:
-    nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
-
+def test_caching(*, patch: bool) -> None:
     sleep = timedelta(milliseconds=400)
+    preload = f"import time; time.sleep({sleep.total_seconds()})"
 
     times: list[timedelta] = []
     for _attempt in range(3):
         start = datetime.now(tz=UTC)
-        with patch_myst_nb(f"import time; time.sleep({sleep.total_seconds()})"):
-            jce.executenb(nb)
+        execute(preload, "print('hi')", patch=patch)
         times.append(datetime.now(tz=UTC) - start)
 
     # the first attempt should be longer than subsequent ones
@@ -156,7 +168,7 @@ async def test_fork_server_concurrent_calls_dont_cross_talk() -> None:
 
 
 def test_python_interpreter_flags(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    *, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, patch: bool
 ) -> None:
     """Kernel specs that include Python interpreter flags must work."""
     kernelspec = dict(
@@ -172,6 +184,4 @@ def test_python_interpreter_flags(
     (kernel_dir / "kernel.json").write_text(json.dumps(kernelspec))
     monkeypatch.setenv("JUPYTER_PATH", str(tmp_path))
 
-    nb = _python_notebook(["1 + 1"], "python3-frozen")
-    with patch_myst_nb(""):
-        jce.executenb(nb)
+    execute("", "1 + 1", patch=patch, kernel_name="python3-frozen")

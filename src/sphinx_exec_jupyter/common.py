@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from docutils import nodes
+    from jupyter_client.manager import KernelManager
     from myst_nb.sphinx_ import SphinxEnvType
 
 
@@ -26,13 +27,13 @@ class ExtData(TypedDict, total=False):
 
 
 def execute_cells(
-    cells: list[str], document: nodes.document, *, kernel_name: str
+    cells: list[str], document: nodes.document, *, kernel_name: str, km: KernelManager
 ) -> list[nodes.Element]:
     """Execute code cells and return resulting docutils nodes, one per cell."""
     notebook_json = v4.writes(_python_notebook(cells, kernel_name))
 
     # execute notebook and append resulting nodes to document
-    parser = myst_nb.sphinx_.Parser()
+    parser = myst_nb.sphinx_.Parser(kernel_manager=km)
     after_last_child = len(document.children)
     with temp_source_code(document, notebook_json):
         parser.parse(notebook_json, document)
