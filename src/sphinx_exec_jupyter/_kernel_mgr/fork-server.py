@@ -23,6 +23,7 @@ def __main() -> None:  # noqa: C901
     import os
     import signal
     import sys
+    from contextlib import suppress
     from pathlib import Path
     from typing import TYPE_CHECKING
 
@@ -71,8 +72,11 @@ def __main() -> None:  # noqa: C901
         if msg["cmd"] == "exit_code":
             code = exit_codes.get(msg["pid"])
         elif msg["cmd"] == "wait":
-            while (code := exit_codes.get(msg["pid"])) is None:
-                signal.pause()  # wait until `SIGCHLD` triggers the handler above
+            # if `reap_children` beats us to it, this raises and `exit_codes` has it
+            with suppress(ChildProcessError):
+                _, status = os.waitpid(msg["pid"], 0)
+                exit_codes[msg["pid"]] = os.waitstatus_to_exitcode(status)
+            code = exit_codes.get(msg["pid"])
         json.dump({"code": code}, sys.stdout)
         sys.stdout.write("\n")
         sys.stdout.flush()

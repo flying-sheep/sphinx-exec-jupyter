@@ -9,7 +9,7 @@ import os
 import signal
 import sys
 import tempfile
-from asyncio import Lock
+from asyncio import Lock, shield
 from asyncio.subprocess import PIPE, create_subprocess_exec
 from contextlib import ExitStack, suppress
 from dataclasses import KW_ONLY, dataclass, field
@@ -109,8 +109,12 @@ def _locked[**P, R](
 ) -> Callable[Concatenate[KernelForkServer, P], Awaitable[R]]:
     @wraps(method)
     async def wrapper(self: KernelForkServer, *args: P.args, **kwargs: P.kwargs) -> R:
-        async with self._lock:
-            return await method(self, *args, **kwargs)
+        async def locked() -> R:
+            async with self._lock:
+                return await method(self, *args, **kwargs)
+
+        # Cancelled callers (e.g. nbclient’s alive poll) mustn’t leave replies unread
+        return await shield(locked())
 
     return wrapper
 
