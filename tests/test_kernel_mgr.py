@@ -23,6 +23,7 @@ from sphinx_exec_jupyter.common import _python_notebook
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
+    from collections.abc import AsyncGenerator
     from pathlib import Path
 
     from nbformat_types.versions import current as nbt
@@ -98,15 +99,11 @@ def test_caching() -> None:
     assert times[0] >= times[2] + sleep
 
 
-async def test_fork_server_concurrent_calls_dont_cross_talk() -> None:
-    """Concurrent `fork`/`wait` calls on a shared `KernelForkServer` must not read
-    each other’s replies off the pipe.
+@pytest.fixture
+async def fake_server() -> AsyncGenerator[KernelForkServer]:
+    """A `KernelForkServer` talking to a fake that replies in command order.
 
-    The fake server below always replies in the order it received commands,
-    exactly like the real one (`fork-server.py`) does.
-    It replies to `fork` slower than to `wait`, so we trigger a race condition:
-    Without lock, `fork()`→`wait()` results in switched replies,
-    i.e. a `fork()` reads back `{"code": ...}` and crashes with `KeyError: 'pid'`.
+    Like the real one (`fork-server.py`), but `fork` and `exit_code` take a moment.
     """
     cmd_queue: asyncio.Queue[Cmd] = asyncio.Queue()
     resp_queue: asyncio.Queue[Resp] = asyncio.Queue()
@@ -120,7 +117,7 @@ async def test_fork_server_concurrent_calls_dont_cross_talk() -> None:
             cmd_queue.put_nowait(msg)
 
         async def drain(self) -> None:
-            if last_cmd == "fork":  # simulate `os.fork()` taking a moment
+            if last_cmd in {"fork", "exit_code"}:
                 await asyncio.sleep(0.05)
 
     class FakeStdout:
@@ -145,14 +142,35 @@ async def test_fork_server_concurrent_calls_dont_cross_talk() -> None:
     server.process = cast("Process", fake_process)
     server_task = asyncio.create_task(fake_fork_server())
     try:
-        fork_task = asyncio.create_task(server.fork(["ignored"], "log.txt"))
-        wait_task = asyncio.create_task(server.wait(123))
-        results = await asyncio.gather(fork_task, wait_task, return_exceptions=True)
-        assert results == [1, 0]
+        yield server
     finally:
         server_task.cancel()
         with suppress(asyncio.CancelledError):
             await server_task
+
+
+async def test_fork_server_concurrent_calls_dont_cross_talk(
+    fake_server: KernelForkServer,
+) -> None:
+    """Concurrent `fork`/`wait` calls must not read each other’s replies.
+
+    Without lock, `fork()`→`wait()` results in switched replies,
+    i.e. a `fork()` reads back `{"code": ...}` and crashes with `KeyError: 'pid'`.
+    """
+    fork_task = asyncio.create_task(fake_server.fork(["ignored"], "log.txt"))
+    wait_task = asyncio.create_task(fake_server.wait(123))
+    results = await asyncio.gather(fork_task, wait_task, return_exceptions=True)
+    assert results == [1, 0]
+
+
+async def test_fork_server_cancelled_call_doesnt_desync(
+    fake_server: KernelForkServer,
+) -> None:
+    """A call cancelled mid-exchange (like nbclient’s alive poll) must eat its reply."""
+    poll_task = asyncio.create_task(fake_server.get_exit_code(123))
+    await asyncio.sleep(0.01)  # command sent, reply pending
+    poll_task.cancel()
+    assert await fake_server.fork(["ignored"], "log.txt") == 1
 
 
 def test_python_interpreter_flags(
