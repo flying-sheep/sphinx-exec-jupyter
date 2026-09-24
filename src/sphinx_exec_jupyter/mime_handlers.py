@@ -44,7 +44,7 @@ class SEJMimeRenderer(MimeRenderPlugin):
     @override
     def handle_mime(
         renderer: NbElementRenderer, data: MimeData, inline: int
-    ) -> None | list[nodes.Element]:
+    ) -> list[nodes.Element] | None:
         if not inline and data.mime_type in HV_MIME_TYPES:
             return []
         if not inline and (get_dims := RASTER_IMAGE_DIMS.get(data.mime_type)):
