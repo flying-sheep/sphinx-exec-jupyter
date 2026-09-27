@@ -16,6 +16,7 @@ from dataclasses import KW_ONLY, dataclass, field
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload, override
+from uuid import uuid4
 
 from jupyter_client import LocalPortCache
 from jupyter_client.kernelspec import KernelSpec, KernelSpecManager
@@ -350,6 +351,19 @@ class ForkingKernelManager(AsyncKernelManager):
     @default("kernel_spec_manager")
     def _default_kernel_spec_manager(self) -> ForkingKernelSpecManager:
         return ForkingKernelSpecManager(parent=self)
+
+    # TCP port picking races across processes (bind to 0, close, kernel rebinds later),
+    # so use unique IPC sockets where available.
+    @default("transport")
+    def _default_transport(self) -> str:
+        return "tcp" if sys.platform == "win32" else "ipc"
+
+    @default("ip")
+    def _default_ip(self) -> str:
+        if self.transport != "ipc":
+            return super()._ip_default()
+        # short path: unix socket paths are limited to ~104 bytes
+        return str(Path(tempfile.gettempdir()) / f"sej-{uuid4().hex[:12]}")
 
     code: str
     provisioner: ForkingProvisioner
