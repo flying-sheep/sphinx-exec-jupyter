@@ -111,6 +111,53 @@ def test_holoviews_fake_backend(tmp_path: Path) -> None:
     assert out["text/plain"].astext() == "None\n"
 
 
+@pytest.mark.parametrize(
+    "directive",
+    [
+        pytest.param("exec-jupyter", id="exec_jupyter"),
+        pytest.param("holoviews", marks=SKIP_NO_HV),
+    ],
+)
+def test_parallel_read(tmp_path: Path, directive: str) -> None:
+    """With `-j2`, documents are executed concurrently.
+
+    Each document waits for another one to start, which deadlocks (and times out)
+    if they’re read serially.
+    """
+    names = ["a", "b"]
+    (tmp_path / "conf.py").write_text('extensions = ["sphinx_exec_jupyter"]\n')
+    (tmp_path / "index.rst").write_text(
+        ".. toctree::\n\n" + "".join(f"   {n}\n" for n in names)
+    )
+    for name in names:
+        (tmp_path / f"{name}.rst").write_text(f"""\
+{name}
+=
+
+..  {directive}::
+
+    import time
+    from pathlib import Path
+
+    d = Path({str(tmp_path)!r})
+    (d / "started-{name}").touch()
+    deadline = time.monotonic() + 30
+    while not any(p.name != "started-{name}" for p in d.glob("started-*")):
+        assert time.monotonic() < deadline, "documents not read in parallel"
+        time.sleep(0.1)
+    (d / "done-{name}").touch()
+""")
+    app = SphinxTestApp("html", srcdir=tmp_path, parallel=2)
+    assert app.is_parallel_allowed("read")
+
+    app.build()
+    app.cleanup()
+
+    assert sorted(p.name for p in tmp_path.glob("done-*")) == [
+        f"done-{n}" for n in names
+    ]
+
+
 def test_add_image_dimensions(tmp_path: Path) -> None:
     rst = """\
 ..  exec-jupyter::

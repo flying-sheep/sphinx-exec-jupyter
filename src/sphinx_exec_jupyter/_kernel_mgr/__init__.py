@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload, override
 from uuid import uuid4
 
+import jupyter_core.utils
 from jupyter_client import LocalPortCache
 from jupyter_client.kernelspec import KernelSpec, KernelSpecManager
 from jupyter_client.manager import AsyncKernelManager
@@ -411,3 +412,23 @@ def forking_km_class(code: str) -> type[ForkingKernelManager]:
             super().__init__(code, *args, **kwargs)
 
     return F
+
+
+_INHERITED: list[object] = []
+
+
+def _reset_after_fork() -> None:
+    """Drop parent-process state in forked children (e.g. `sphinx -j` workers).
+
+    Cached fork servers are driven through the parent’s pipes, and the event loop
+    cached by `jupyter_core.utils.run_sync` has a selector that doesn’t survive
+    `fork()` (e.g. kqueue on macOS). The old objects are kept alive so their
+    finalizers don’t kill or close anything the parent still uses.
+    """
+    _INHERITED.extend([ForkingProvisioner.SERVERS, jupyter_core.utils._loop.get()])  # noqa: SLF001
+    ForkingProvisioner.SERVERS = {}
+    jupyter_core.utils._loop.set(None)  # noqa: SLF001
+
+
+if hasattr(os, "register_at_fork"):  # not available on all platforms
+    os.register_at_fork(after_in_child=_reset_after_fork)
