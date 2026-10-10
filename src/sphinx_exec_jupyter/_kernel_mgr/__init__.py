@@ -16,15 +16,15 @@ from dataclasses import KW_ONLY, dataclass, field
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypedDict, cast, overload, override
+from uuid import uuid4
 
+import jupyter_core.utils
 from jupyter_client import LocalPortCache
 from jupyter_client.kernelspec import KernelSpec, KernelSpecManager
 from jupyter_client.manager import AsyncKernelManager
 from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import KernelProvisionerBase
 from traitlets import Instance, default
-
-from .myst import maybe_patch_myst_nb
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
@@ -40,8 +40,8 @@ __all__ = [
     "Cmd",
     "ForkingKernelManager",
     "Resp",
+    "forking_km_class",
     "forking_supported",
-    "maybe_patch_myst_nb",
     "start_new_fork_kernel",
 ]
 
@@ -353,6 +353,19 @@ class ForkingKernelManager(AsyncKernelManager):
     def _default_kernel_spec_manager(self) -> ForkingKernelSpecManager:
         return ForkingKernelSpecManager(parent=self)
 
+    # TCP port picking races across processes (bind to 0, close, kernel rebinds later),
+    # so use unique IPC sockets where available.
+    @default("transport")
+    def _default_transport(self) -> str:
+        return "tcp" if sys.platform == "win32" else "ipc"
+
+    @default("ip")
+    def _default_ip(self) -> str:
+        if self.transport != "ipc":
+            return super()._ip_default()
+        # short path: unix socket paths are limited to ~104 bytes
+        return str(Path(tempfile.gettempdir()) / f"sej-{uuid4().hex[:12]}")
+
     code: str
     provisioner: ForkingProvisioner
 
@@ -391,3 +404,31 @@ class ForkingKernelManager(AsyncKernelManager):
             await self.provisioner.wait()
 
     _async_finish_shutdown = finish_shutdown
+
+
+def forking_km_class(code: str) -> type[ForkingKernelManager]:
+    class F(ForkingKernelManager):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(code, *args, **kwargs)
+
+    return F
+
+
+_INHERITED: list[object] = []
+
+
+def _reset_after_fork() -> None:
+    """Drop parent-process state in forked children (e.g. `sphinx -j` workers).
+
+    Cached fork servers are driven through the parent’s pipes, and the event loop
+    cached by `jupyter_core.utils.run_sync` has a selector that doesn’t survive
+    `fork()` (e.g. kqueue on macOS). The old objects are kept alive so their
+    finalizers don’t kill or close anything the parent still uses.
+    """
+    _INHERITED.extend([ForkingProvisioner.SERVERS, jupyter_core.utils._loop.get()])  # noqa: SLF001
+    ForkingProvisioner.SERVERS = {}
+    jupyter_core.utils._loop.set(None)  # noqa: SLF001
+
+
+if hasattr(os, "register_at_fork"):  # not available on all platforms
+    os.register_at_fork(after_in_child=_reset_after_fork)
