@@ -40,12 +40,12 @@ jobs:
   test:
     needs: get-environments
     permissions:
-      id-token: write  # for codecov OIDC
+      id-token: write # for codecov OIDC
     runs-on: ubuntu-latest
     strategy:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
-    env:  # environment variable for use in codecov’s env_vars tagging
+    env: # environment variable for use in codecov’s env_vars tagging
       ENV_NAME: ${{ matrix.env.name }}
     steps:
       - *CLONE
@@ -82,6 +82,6 @@ jobs:
       - test
     runs-on: ubuntu-latest
     steps:
-        - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 #v1.3.0
-          with:
-            jobs: ${{ toJSON(needs) }}
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 #v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
