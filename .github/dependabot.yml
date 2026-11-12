@@ -9,3 +9,12 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      pre-commit:
+        patterns: ["*"]
