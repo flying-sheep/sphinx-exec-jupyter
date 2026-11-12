@@ -23,6 +23,10 @@ repos:
     rev: v2.6.4
     hooks:
       - id: biome-format
+  - repo: https://github.com/jolars/panache-pre-commit
+    rev: v3.18.0
+    hooks:
+      - id: panache-format
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.32.0
     hooks:
