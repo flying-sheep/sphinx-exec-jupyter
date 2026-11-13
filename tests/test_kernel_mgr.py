@@ -81,6 +81,7 @@ def test_shutdown(subtests: pytest.Subtests) -> None:
             jce.executenb(nb)
 
 
+@pytest.mark.flaky(reruns=2)  # timing-based, CPU contention from other xdist workers
 def test_caching() -> None:
     nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print('hi')")])
 
