@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from sphinx.util.docutils import SphinxDirective
 
-from ._kernel_mgr import maybe_patch_myst_nb
 from ._pending import PendingExecNode
 from .common import execute_cells
 
@@ -23,7 +22,10 @@ class ExecJupyterDirective(SphinxDirective):
         code = "\n".join(self.content)
         if self.config.exec_jupyter_isolate_per_document:
             return [PendingExecNode(cells=[code], hv_backends=None)]
-        with maybe_patch_myst_nb(self.config):
-            return execute_cells(
-                [code], self.state.document, kernel_name=self.config.exec_jupyter_kernel
-            )
+        kernel_name = self.config.exec_jupyter_kernel
+        return execute_cells(
+            [code],
+            self.state.document,
+            kernel_name=kernel_name,
+            prefix=self.config.exec_jupyter_code,
+        )

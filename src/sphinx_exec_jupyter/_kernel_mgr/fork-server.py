@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from IPython.core.interactiveshell import InteractiveShell
+from traitlets.config import Config
 
-InteractiveShell.instance()  # so preload code sees a real `get_ipython()`
+# `HistoryManager.enabled=False` avoids spawning threads,
+# allowing to run the tests on macOS.
+cfg = Config()
+cfg.HistoryManager.enabled = False
+InteractiveShell.instance(config=cfg)  # so preload code sees a real `get_ipython()`
 
-del InteractiveShell
+del InteractiveShell, Config, cfg
 
 "USER_CODE_INSERTION_POINT"
 
