@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import os
+
 from IPython.core.interactiveshell import InteractiveShell
 
 InteractiveShell.instance()  # so preload code sees a real `get_ipython()`
 
-del InteractiveShell
+# GNU OpenMP (numba’s default threading layer on Linux) isn’t fork-safe:
+# if preload code launches it, forked kernels die on their first parallel call.
+os.environ.setdefault("NUMBA_THREADING_LAYER", "forksafe")
+
+del os, InteractiveShell
 
 "USER_CODE_INSERTION_POINT"
 
